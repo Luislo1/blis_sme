@@ -34,7 +34,7 @@
 */
 
 #include "blis.h"
-#include "armv8a_asm_utils.h"
+#include "m4sme_asm_utils.h"
 
 // #define DISPLAY_DEBUG_INFO
 
@@ -67,7 +67,7 @@
  * Tested on 1s Altra Max. Arnd 5,800 GFLOPS. 128 x N2 cores @ 3.0 GHz
 */
 
-void bli_sgemm_armv8a_asm_8x12
+void bli_sgemm_m4sme_asm_8x12
      (
              dim_t      m,
              dim_t      n,
@@ -1145,7 +1145,7 @@ void bli_sgemm_armv8a_asm_8x12
  * Tested on 1s Altra, Around 1,700 GFLOPS,  80 x N2 cores @ 3.0 GHz
  * Tested on 1s Altra Max,  ~ 2,600 GFLOPS, 128 x N2 cores @ 3.0 GHz
 */
-void bli_dgemm_armv8a_asm_6x8
+void bli_dgemm_m4sme_asm_6x8
      (
              dim_t      m,
              dim_t      n,
@@ -1165,7 +1165,7 @@ void bli_dgemm_armv8a_asm_6x8
 
 	if ( bFirstTime )
 	{
-		printf( "In bli_dgemm_armv8a_asm_6x8: rs_c0=%d, cs_c0=%d \n",
+		printf( "In bli_dgemm_m4sme_asm_6x8: rs_c0=%d, cs_c0=%d \n",
 		        (int) rs_c0, (int) cs_c0 );
 		fflush( stdout );
 		bFirstTime = false;

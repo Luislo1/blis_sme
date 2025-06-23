@@ -37,10 +37,10 @@
 #include "blis.h"
 
 // Label locality & misc.
-#include "armv8a_asm_utils.h"
+#include "m4sme_asm_utils.h"
 
 // Nanokernel operations.
-#include "armv8a_asm_d2x2.h"
+#include "m4sme_asm_d2x2.h"
 
 /* Order of row-major SGEMM_12x8's execution in 4x5 blocks:
  *
@@ -132,7 +132,7 @@
 " prfm PLDL1KEEP, ["#CADDR", "#LASTB"] \n\t" \
 " add  "#CADDR", "#CADDR", "#RSC"      \n\t"
 
-void bli_sgemm_armv8a_asm_12x8r
+void bli_sgemm_m4sme_asm_12x8r
      (
              dim_t      m,
              dim_t      n,
@@ -377,7 +377,7 @@ LABEL(SEND_WRITE_MEM)
  * Differences from the col-major 6x8 in HW modeling:
  * * Stream HW prefetcher is assumed s.t. PRFM instructions for packed A&B are omitted.
  */
-void bli_dgemm_armv8a_asm_8x6r
+void bli_dgemm_m4sme_asm_8x6r
      (
              dim_t      m,
              dim_t      n,

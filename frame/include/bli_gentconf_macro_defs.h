@@ -45,7 +45,7 @@
 
 // -- Apple M4 architecture ----------------------------------------------------
 
-#ifdef BLIS_ARCH_M4SME
+#ifdef BLIS_CONFIG_M4SME
 #define INSERT_GENTCONF_M4SME GENTCONF( M4SME, m4sme )
 #else
 #define INSERT_GENTCONF_M4SME

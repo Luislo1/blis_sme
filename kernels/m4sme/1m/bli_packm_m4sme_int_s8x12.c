@@ -50,7 +50,7 @@
 #define PRAGMA_UNROLL_4
 #endif
 
-void bli_spackm_armv8a_int_8x12
+void bli_spackm_m4sme_int_8x12
      (
              conj_t  conja,
              pack_t  schema,
