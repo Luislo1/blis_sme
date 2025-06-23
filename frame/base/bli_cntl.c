@@ -6,6 +6,7 @@
 
    Copyright (C) 2014, The University of Texas at Austin
    Copyright (C) 2018 - 2019, Advanced Micro Devices, Inc.
+   Copyright (C) 2024, Southern Methodist University
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are
@@ -66,6 +67,29 @@ void bli_cntl_attach_sub_node
 	if ( next == BLIS_MAX_SUB_NODES )
 		bli_abort();
 
+	bli_cntl_set_ways( next, ways, cntl );
+	bli_cntl_set_sub_node( next, sub_node, cntl );
+}
+
+void bli_cntl_insert_sub_node
+     (
+       dim_t   ways,
+       cntl_t* sub_node,
+       cntl_t* child_node,
+       cntl_t* cntl
+     )
+{
+	dim_t next = 0;
+	for ( ; next < BLIS_MAX_SUB_NODES; next++ )
+	{
+		if ( bli_cntl_sub_node( next, cntl ) == child_node )
+			break;
+	}
+
+	if ( next == BLIS_MAX_SUB_NODES )
+		bli_abort();
+
+	bli_cntl_attach_sub_node( bli_cntl_ways( next, cntl ), child_node, sub_node );
 	bli_cntl_set_ways( next, ways, cntl );
 	bli_cntl_set_sub_node( next, sub_node, cntl );
 }

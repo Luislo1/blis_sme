@@ -5,6 +5,7 @@
    libraries.
 
    Copyright (C) 2014, The University of Texas at Austin
+   Copyright (C) 2021, Southern Methodist University
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are
@@ -47,8 +48,8 @@ void bli_packm_int
 
 	// Barrier so that we know threads are done with previous computation
 	// with the same packing buffer before starting to pack.
-	thrinfo_t* thread = bli_thrinfo_sub_node( 0, thread_par );
-	bli_thrinfo_barrier( thread );
+	//thrinfo_t* thread = bli_thrinfo_sub_node( 0, thread_par );
+	bli_thrinfo_barrier( thread_par );
 
 	bli_packm_cntl_variant( cntl )
 	(
@@ -56,10 +57,10 @@ void bli_packm_int
 	  p,
 	  cntx,
 	  cntl,
-	  thread
+	  thread_par
 	);
 
 	// Barrier so that packing is done before computation.
-	bli_thrinfo_barrier( thread );
+	bli_thrinfo_barrier( thread_par );
 }
 
