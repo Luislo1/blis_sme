@@ -180,6 +180,11 @@ arch_t bli_arch_query_id_impl( void )
 		id = bli_cpuid_query_id();
 		#endif
 
+		// Apple M4 architecture
+		#ifdef BLIS_FAMILY_M4SME
+		id = BLIS_ARCH_M4SME;
+		#endif
+
 		// Intel microarchitectures.
 		#ifdef BLIS_FAMILY_SKX
 		id = BLIS_ARCH_SKX;

@@ -1,0 +1,211 @@
+% no -g option given; defaulting to "input.general" for parameters filename.
+% no -o option given; defaulting to "input.operations" for operations filename.
+% 
+% --- BLIS library info -------------------------------------
+% 
+% version string                 0.9.0-184
+% 
+% --- BLIS configuration info ---
+% 
+% active sub-configuration       cortexa57
+% 
+% BLIS integer type size (bits)  64
+% 
+% Assumed max # of SIMD regs     32
+% SIMD size (bytes)              64
+% SIMD alignment (bytes)         16
+% Max stack buffer size (bytes)  8192
+% Page size (bytes)              4096
+% 
+% memory pools
+%   enabled for packing blocks?  1
+%   enabled for small blocks?    1
+% 
+% memory alignment (bytes)         
+%   stack address                16
+%   obj_t address                16
+%   obj_t stride                 16
+%   pool block addr A (+offset)  4096 (+0)
+%   pool block addr B (+offset)  4096 (+0)
+% 
+% BLAS/CBLAS compatibility layers  
+%   BLAS API enabled?            1
+%   CBLAS API enabled?           0
+%   integer type size (bits)     32
+% 
+% libmemkind                       
+%   enabled?                     0
+% 
+% gemm sandbox                     
+%   enabled?                     0
+% 
+% floating-point types           s       d       c       z 
+%   sizes (bytes)                4       8       8      16
+% 
+% 
+% --- BLIS parallelization info ---
+% 
+% thread-local storage (TLS)     1
+% 
+% multithreading modes           single only
+%   default mode                 single
+%   current mode                 single
+% 
+% thread auto-factorization        
+%   m dim thread ratio           1
+%   n dim thread ratio           1
+%   jr max threads               4
+%   ir max threads               1
+% 
+% ways of parallelism     nt    jc    pc    ic    jr    ir
+%   environment            1     1     1     1     1     1
+% 
+% thread partitioning              
+%   jr/ir loops                  slab
+% 
+% 
+% --- BLIS default implementations ---
+% 
+% level-3 implementations        s       d       c       z
+%   gemm                    native  native      1m      1m
+%   hemm                    native  native      1m      1m
+%   herk                    native  native      1m      1m
+%   her2k                   native  native      1m      1m
+%   symm                    native  native      1m      1m
+%   syrk                    native  native      1m      1m
+%   syr2k                   native  native      1m      1m
+%   trmm                    native  native      1m      1m
+%   trmm3                   native  native      1m      1m
+%   trsm                    native  native      1m      1m
+% 
+% 
+% --- BLIS native implementation info ---
+% 
+%                                                c       z 
+% complex implementation                    native  native
+% 
+% level-3 blocksizes             s       d       c       z 
+%   mc                         120     120     128      64
+%   kc                         640     240     256     256
+%   nc                        3072    3072    4096    4096
+% 
+%   mc maximum                 120     120     128      64
+%   kc maximum                 640     240     256     256
+%   nc maximum                3072    3072    4096    4096
+% 
+%   mr                           8       6       4       4
+%   nr                          12       8       8       4
+% 
+%   mr packdim                   8       6       4       4
+%   nr packdim                  12       8       8       4
+% 
+% micro-kernel types             s       d       c       z
+%   gemm                   optimzd optimzd refrnce refrnce
+%   gemmtrsm_l             refrnce refrnce refrnce refrnce
+%   gemmtrsm_u             refrnce refrnce refrnce refrnce
+%   trsm_l                 refrnce refrnce refrnce refrnce
+%   trsm_u                 refrnce refrnce refrnce refrnce
+% 
+% 
+% micro-kernel prefers rows?     s       d       c       z
+%   gemm                         0       0       1       1
+%   gemmtrsm_l                   0       0       0       0
+%   gemmtrsm_u                   0       0       0       0
+%   trsm_l                       0       0       0       0
+%   trsm_u                       0       0       0       0
+% 
+% 
+% 
+% --- BLIS misc. other info ---
+% 
+% level-2 cache blocksizes       s       d       c       z 
+%   m dimension               1000    1000    1000    1000
+%   n dimension               1000    1000    1000    1000
+% 
+% level-1f fusing factors        s       d       c       z 
+%   axpyf                        8       8       8       8
+%   dotxf                        6       6       6       6
+%   dotxaxpyf                    4       4       4       4
+% 
+
+% 
+% --- BLIS test suite parameters ----------------------------
+% 
+% num repeats per experiment   1
+% num matrix storage schemes   1
+% storage[ matrix ]            c
+% num vector storage schemes   2
+% storage[ vector ]            cj
+% mix all storage schemes?     0
+% test with aligned memory?    1
+% randomization method         0
+% general stride spacing       32
+% num datatypes                2
+% datatype[0]                  0 (s)
+%         [1]                  2 (d)
+% mix domains for gemm?        0
+% mix precisions for gemm?     0
+% problem size: first to test  100
+% problem size: max to test    5000
+% problem size increment       400
+% complex implementations        
+%   1m?                        1
+%   native?                    1
+% simulated app-level threads  1
+% error-checking level         1
+% reaction to failure          i
+% output in matlab format?     0
+% output to stdout AND files?  0
+% 
+
+% 
+% --- Section overrides ---
+% 
+% Utility operations           0
+% Level-1v operations          0
+% Level-1m operations          0
+% Level-1f operations          0
+% Level-2 operations           0
+% Level-3 micro-kernels        0
+% Level-3 operations           1
+% 
+
+% --- gemm ---
+% 
+% gemm m n k                  -1 -1 -1
+% gemm operand params         nn
+% 
+
+% blis_<dt><op>_<params>_<stor>            m     n     k   gflops   resid      result
+blis_sgemm_nn_ccc                        100   100   100     5.44   2.32e-08   PASS
+blis_sgemm_nn_ccc                        500   500   500    39.60   1.32e-08   PASS
+blis_sgemm_nn_ccc                        900   900   900    59.66   1.74e-08   PASS
+blis_sgemm_nn_ccc                       1300  1300  1300    71.26   1.47e-08   PASS
+blis_sgemm_nn_ccc                       1700  1700  1700    80.10   2.10e-08   PASS
+blis_sgemm_nn_ccc                       2100  2100  2100    84.77   1.41e-08   PASS
+blis_sgemm_nn_ccc                       2500  2500  2500    91.08   1.85e-08   PASS
+blis_sgemm_nn_ccc                       2900  2900  2900    94.95   2.48e-08   PASS
+blis_sgemm_nn_ccc                       3300  3300  3300    87.28   1.51e-08   PASS
+blis_sgemm_nn_ccc                       3700  3700  3700    90.30   1.73e-08   PASS
+blis_sgemm_nn_ccc                       4100  4100  4100    91.88   1.03e-08   PASS
+blis_sgemm_nn_ccc                       4500  4500  4500    94.86   1.20e-08   PASS
+blis_sgemm_nn_ccc                       4900  4900  4900    96.94   1.32e-08   PASS
+
+% blis_<dt><op>_<params>_<stor>            m     n     k   gflops   resid      result
+blis_dgemm_nn_ccc                        100   100   100     8.89   4.12e-17   PASS
+blis_dgemm_nn_ccc                        500   500   500    29.37   2.63e-17   PASS
+blis_dgemm_nn_ccc                        900   900   900    38.45   3.15e-17   PASS
+blis_dgemm_nn_ccc                       1300  1300  1300    43.10   2.63e-17   PASS
+blis_dgemm_nn_ccc                       1700  1700  1700    46.32   4.04e-17   PASS
+blis_dgemm_nn_ccc                       2100  2100  2100    48.99   2.84e-17   PASS
+blis_dgemm_nn_ccc                       2500  2500  2500    50.37   3.69e-17   PASS
+blis_dgemm_nn_ccc                       2900  2900  2900    51.32   4.61e-17   PASS
+blis_dgemm_nn_ccc                       3300  3300  3300    49.23   2.65e-17   PASS
+blis_dgemm_nn_ccc                       3700  3700  3700    50.13   3.22e-17   PASS
+blis_dgemm_nn_ccc                       4100  4100  4100    50.55   1.91e-17   PASS
+blis_dgemm_nn_ccc                       4500  4500  4500    51.76   2.17e-17   PASS
+blis_dgemm_nn_ccc                       4900  4900  4900    52.02   2.46e-17   PASS
+
+% 
+% Exiting normally.
+% 

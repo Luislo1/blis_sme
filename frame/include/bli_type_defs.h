@@ -959,6 +959,9 @@ typedef enum
 	// NOTE: The C language standard guarantees that the first enum value
 	// starts at 0.
 
+	// Apple M4 AMX
+	BLIS_ARCH_M4SME,
+
 	// Intel
 	BLIS_ARCH_SKX,
 	BLIS_ARCH_KNL,

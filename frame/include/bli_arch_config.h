@@ -50,6 +50,12 @@ INSERT_GENTCONF
 // -- Architecture family-specific headers -------------------------------------
 //
 
+// -- Apple M4 --
+
+#ifdef BLIS_FAMILY_M4SME
+#include "bli_family_m4sme.h"
+#endif
+
 // -- x86_64 families --
 
 #ifdef BLIS_FAMILY_INTEL64

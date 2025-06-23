@@ -1,0 +1,17 @@
+clang-20 -O0 -march=armv9.2-a+sme2p1+sme-f64f64+sme-i16i64+sme-f16f16 -Werror=implicit-function-declaration -Wall -Wno-unused-function -Wfatal-errors -Wno-tautological-compare -Wno-pass-failed -fPIC -std=c99 -D_GNU_SOURCE -D_POSIX_C_SOURCE=200112L -D_DARWIN_C_SOURCE -Iinclude/m4sme -I./frame/include -DBLIS_CNAME=m4sme -DBLIS_CNAME_UPPER=M4SME -DBLIS_IS_BUILDING_LIBRARY -fvisibility=hidden -c config/m4sme/bli_cntx_init_m4sme.c -o obj/m4sme/config/m4sme/bli_cntx_init_m4sme.o
+config/m4sme/bli_cntx_init_m4sme.c:42:2: fatal error: call to undeclared function 'bli_cntx_init_m4sme_ref'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   42 |         bli_cntx_init_m4sme_ref( cntx );
+      |         ^
+config/m4sme/bli_cntx_init_m4sme.c:42:2: note: did you mean 'bli_cntx_init_m4sme'?
+config/m4sme/bli_cntx_init_m4sme.c:37:6: note: 'bli_cntx_init_m4sme' declared here
+   37 | void bli_cntx_init_m4sme( cntx_t* cntx )
+      |      ^
+   38 | {
+   39 |         blksz_t blkszs[ BLIS_NUM_BLKSZS ];
+   40 | 
+   41 |         // Set default kernel blocksizes and functions.
+   42 |         bli_cntx_init_m4sme_ref( cntx );
+      |         ~~~~~~~~~~~~~~~~~~~~~~~
+      |         bli_cntx_init_m4sme
+1 error generated.
+make: *** [obj/m4sme/config/m4sme/bli_cntx_init_m4sme.o] Error 1
