@@ -31,7 +31,7 @@
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
-uy
+
 PACKM_KER_PROT( float,    s, packm_m4sme_int_8x12 )
 PACKM_KER_PROT( double,   d, packm_m4sme_int_6x8 )
 

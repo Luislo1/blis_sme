@@ -42,7 +42,7 @@
 //
 
 #undef GENTCONF
-#define GENTCONF( CONFIG, config ) CNTX_INIT_PROTS( config )
+#define GENTCONF(CONFIG, config) CNTX_INIT_PROTS(config)
 
 INSERT_GENTCONF
 
@@ -199,10 +199,14 @@ INSERT_GENTCONF
 #include "bli_family_generic.h"
 #endif
 
-
 //
 // -- kernel set prototypes ----------------------------------------------------
 //
+
+// -- Apple M4 architecture --
+#ifdef BLIS_KERNELS_M4SME
+#include "bli_kernels_m4sme.h"
+#endif
 
 // -- Intel64 architectures --
 #ifdef BLIS_KERNELS_SKX
@@ -232,12 +236,12 @@ INSERT_GENTCONF
 #ifdef BLIS_KERNELS_ZEN
 #include "bli_kernels_zen.h"
 #endif
-//#ifdef BLIS_KERNELS_EXCAVATOR
-//#include "bli_kernels_excavator.h"
-//#endif
-//#ifdef BLIS_KERNELS_STEAMROLLER
-//#include "bli_kernels_steamroller.h"
-//#endif
+// #ifdef BLIS_KERNELS_EXCAVATOR
+// #include "bli_kernels_excavator.h"
+// #endif
+// #ifdef BLIS_KERNELS_STEAMROLLER
+// #include "bli_kernels_steamroller.h"
+// #endif
 #ifdef BLIS_KERNELS_PILEDRIVER
 #include "bli_kernels_piledriver.h"
 #endif
@@ -293,6 +297,4 @@ INSERT_GENTCONF
 #include "bli_kernels_sifive_x280.h"
 #endif
 
-
 #endif
-

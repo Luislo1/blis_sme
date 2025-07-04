@@ -45,9 +45,9 @@
 // -- LEVEL-3 MICRO-KERNEL CONSTANTS -------------------------------------------
 
 #define BLIS_SGEMM_UKERNEL             bli_sgemm_opt_8x12
-#define BLIS_DEFAULT_MR_S              8
-#define BLIS_DEFAULT_NR_S              12
-#define BLIS_DEFAULT_MC_S              120 //1536 //336 //416 // 1280 //160 // 160 // 160 //2048 //336 
+#define BLIS_DEFAULT_MR_S              16
+#define BLIS_DEFAULT_NR_S              16
+#define BLIS_DEFAULT_MC_S              160 //1536 //336 //416 // 1280 //160 // 160 // 160 //2048 //336 
 #define BLIS_DEFAULT_KC_S              640 //1536 //336 //704 //1280 //672 //528 // 856 //2048 //528 
 #define BLIS_DEFAULT_NC_S              3072
 

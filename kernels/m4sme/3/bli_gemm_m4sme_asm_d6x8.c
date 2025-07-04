@@ -89,98 +89,243 @@ void bli_sgemm_m4sme_asm_8x12
 	// different size than is expected by load instructions.
 	uint64_t k_iter = k / 4;
 	uint64_t k_left = k % 4;
-	uint64_t rs_c   = rs_c0;
-	uint64_t cs_c   = cs_c0;
+	uint64_t rs_c   = rs_c0; // Num of elements per row
+	uint64_t cs_c   = cs_c0; // Num of elements per column
 
-	GEMM_UKR_SETUP_CT_ANY( s, 8, 12, false );
+	GEMM_UKR_SETUP_CT_ANY( s, 16, 16, false );
 
 	__asm__ volatile
 	(
 	" smstart                                    \n\t"
-	" smstop                                     \n\t"
 	" ldr x0,%[aaddr]                            \n\t" // Load address of A.
 	" ldr x1,%[baddr]                            \n\t" // Load address of B.
 	" ldr x2,%[caddr]                            \n\t" // Load address of C.
 	"                                            \n\t"
 	" ldr x10,%[cs_c]                            \n\t" // Load cs_c.
 	" lsl x10,x10,#2                             \n\t" // cs_c * sizeof(float) -- AUX.
+	" ldr x14,%[rs_c]                            \n\t" // Load rs_c.
+	" lsl x14,x14,#2                             \n\t" // rs_c * sizeof(float).
 	"                                            \n\t"
+	" ldr x5,%[k]                                \n\t" // Number iterations (k)
+	"                                            \n\t"
+	LABEL (INICIOBUCLE)
+	" ldr z0, [x0]                               \n\t" // Load A
+	" add x1, x1, #64                            \n\t" // Update A address 
+	"                                            \n\t"
+	" ldr z1, [x1]                               \n\t" // Load B
+	" add x1, x1, #64                            \n\t" // Update B address
+	"                                            \n\t"
+	" fmopa za0.s, p0/m, p0/m, z0.s, z1.s        \n\t" // Calculate the outter product of a and b
+	"                                            \n\t"
+	" sub x5,x5,1                                \n\t" // i-=1
+	" cmp x5,#0                                  \n\t" // while i > 0.
+	BNE (INICIOBUCLE)
+	" ldr x0,%[alpha]                            \n\t" // Alpha address.
+	" ldr x1,%[beta]                             \n\t" // Beta address.
+	"                                            \n\t"
+	" ld1rw z16.s, p0/z, [x0]                    \n\t" // Load alpha.
+	" ld1rw z17.s, p0/z, [x1]                    \n\t" // Load beta
+	" ldr s17, [x1]      						 \n\t" // Carga beta como escalar
+	" fcmp s17, #0.0							 \n\t" // Compare beta to 0.0
+	BEQ (NOBETA)
+	" mov x3, x2                                 \n\t" // Copy C address 
+	" ldr z0, [x3]                               \n\t" // Load C[0] 
+	" fmul z0.s, p0/m, z0.s, z17.s               \n\t" // Multiply C[0] by beta 
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z1, [x3]                               \n\t" // Load C[1]
+	" fmul z1.s, p0/m, z1.s, z17.s               \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z2, [x3]                               \n\t" // Load C[2]
+	" fmul z2.s, p0/m, z2.s, z17.s               \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z3, [x3]                               \n\t" // Load C[3]
+	" fmul z3.s, p0/m, z3.s, z17.s               \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z4, [x3]                               \n\t" // Load C[4]
+	" fmul z4.s, p0/m, z4.s, z17.s               \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z5, [x3]                               \n\t" // Load C[5]
+	" fmul z5.s, p0/m, z5.s, z17.s               \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z6, [x3]                               \n\t" // Load C[6]
+	" fmul z6.s, p0/m, z6.s, z17.s               \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z7, [x3]                               \n\t" // Load C[7]
+	" fmul z7.s, p0/m, z7.s, z17.s               \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z8, [x3]                               \n\t" // Load C[8]
+	" fmul z8.s, p0/m, z8.s, z17.s               \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z9, [x3]                               \n\t" // Load C[9]
+	" fmul z9.s, p0/m, z9.s, z17.s               \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z10, [x3]                              \n\t" // Load C[10]
+	" fmul z10.s, p0/m, z10.s, z17.s             \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z11, [x3]                              \n\t" // Load C[11]
+	" fmul z11.s, p0/m, z11.s, z17.s             \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z12, [x3]                              \n\t" // Load C[12]
+	" fmul z12.s, p0/m, z12.s, z17.s             \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z13, [x3]                              \n\t" // Load C[13]
+	" fmul z13.s, p0/m, z13.s, z17.s             \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z14, [x3]                              \n\t" // Load C[14]
+	" fmul z14.s, p0/m, z14.s, z17.s             \n\t" // Multiply C[0] by beta
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" ldr z15, [x3]                              \n\t" // Load C[15]
+	" fmul z15.s, p0/m, z15.s, z17.s             \n\t" // Multiply C[0] by beta
+	BRANCH (FINBETA)
+	LABEL (NOBETA)
+    " eor z0.b, z0.b, z0.b                       \n\t"
+    " eor z1.b, z1.b, z1.b                       \n\t"
+    " eor z2.b, z2.b, z2.b                       \n\t"
+    " eor z3.b, z3.b, z3.b                       \n\t"
+    " eor z4.b, z4.b, z4.b                       \n\t"
+    " eor z5.b, z5.b, z5.b                       \n\t"
+    " eor z6.b, z6.b, z6.b                       \n\t"
+    " eor z7.b, z7.b, z7.b                       \n\t"
+    " eor z8.b, z8.b, z8.b                       \n\t"
+    " eor z9.b, z9.b, z9.b                       \n\t"
+    " eor z10.b, z10.b, z10.b                    \n\t"
+    " eor z11.b, z11.b, z11.b                    \n\t"
+    " eor z12.b, z12.b, z12.b                    \n\t"
+    " eor z13.b, z13.b, z13.b                    \n\t"
+    " eor z14.b, z14.b, z14.b                    \n\t"
+    " eor z15.b, z15.b, z15.b                    \n\t"
+	LABEL (FINBETA)
+	" mov w12, #0            					 \n\t "
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[0] to z18
+	" fmla z0.s, p0/m, z18.s, z16.s				 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[1] to z18
+	" fmla z1.s, p0/m, z18.s, z16.s				 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[2] to z18
+	" fmla z2.s, p0/m, z18.s, z16.s				 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[3] to z18
+	" fmla z3.s, p0/m, z18.s, z16.s				 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[4] to z18
+	" fmla z4.s, p0/m, z18.s, z16.s				 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[5] to z18
+	" fmla z5.s, p0/m, z18.s, z16.s				 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[6] to z18
+	" fmla z6.s, p0/m, z18.s, z16.s				 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[7] to z18
+	" fmla z7.s, p0/m, z18.s, z16.s				 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[8] to z18
+	" fmla z8.s, p0/m, z18.s, z16.s				 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[9] to z18
+	" fmla z9.s, p0/m, z18.s, z16.s				 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[10] to z18
+	" fmla z10.s, p0/m, z18.s, z16.s			 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[11] to z18
+	" fmla z11.s, p0/m, z18.s, z16.s			 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[12] to z18
+	" fmla z12.s, p0/m, z18.s, z16.s			 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[13] to z18
+	" fmla z13.s, p0/m, z18.s, z16.s			 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[14] to z18
+	" fmla z14.s, p0/m, z18.s, z16.s			 \n\t " // Multiply A*B by alpha and acumulate
+	" add w12, w12, #1        					 \n\t " // Move idex of ZA
+	" mov z18.s, p0/m, za0h.s[w12, 0]      		 \n\t " // Move ZA[15] to z18
+	" fmla z15.s, p0/m, z18.s, z16.s			 \n\t " // Multiply A*B by alpha and acumulate
+	"                                            \n\t"
+	" mov x3, x2                                 \n\t" // Copy C address 
+	" st1w { z0.s }, p0, [x3]                    \n\t" // Store C[0] 
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z1.s }, p0, [x3]                    \n\t" // Store C[1]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z2.s }, p0, [x3]                    \n\t" // Store C[2]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z3.s }, p0, [x3]                    \n\t" // Store C[3]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z4.s }, p0, [x3]                    \n\t" // Store C[4]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z5.s }, p0, [x3]                    \n\t" // Store C[5]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z6.s }, p0, [x3]                    \n\t" // Store C[6]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z7.s }, p0, [x3]                    \n\t" // Store C[7]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z8.s }, p0, [x3]                    \n\t" // Store C[8]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z9.s }, p0, [x3]                    \n\t" // Store C[9]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z10.s }, p0, [x3]                   \n\t" // Store C[10]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z11.s }, p0, [x3]                   \n\t" // Store C[11]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z12.s }, p0, [x3]                   \n\t" // Store C[12]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z13.s }, p0, [x3]                   \n\t" // Store C[13]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z14.s }, p0, [x3]                   \n\t" // Store C[14]
+	" add x3, x3, x14                            \n\t" // Next C address 
+	" st1w { z15.s }, p0, [x3]                   \n\t" // Store C[15]
+
+
+
+
+	/*
 	" ldr x5,%[k_iter]                           \n\t" // Number of unrolled iterations (k_iter).
 	" ldr x6,%[k_left]                           \n\t" // Number of remaining iterations (k_left).
 	" add x16,x2,x10                             \n\t" //Load address Column 1 of C
 	"                                            \n\t"
-	" ldr x14,%[rs_c]                            \n\t" // Load rs_c.
-	" lsl x14,x14,#2                             \n\t" // rs_c * sizeof(float).
 	"                                            \n\t"
 	"                                            \n\t"
 	" dup  v8.4s, wzr                            \n\t" // Vector for accummulating column 0
-	" prfm    PLDL1KEEP, [x1, #192]              \n\t"
-	" prfm pldl1keep,[x2]                        \n\t" // Prefetch c.
 	" add x17,x16,x10                            \n\t" //Load address Column 2 of C
 	" dup  v9.4s, wzr                            \n\t" // Vector for accummulating column 0
-	" prfm    PLDL1KEEP, [x1, #256]              \n\t"
 	"                                            \n\t" // Since the columns can cross a cache line boundary,
 	                                                   // we also need to prefetch the "ends"
-	" prfm pldl1keep,[x2, #16]                   \n\t" // Prefetch c.
 	" add x19,x17,x10                            \n\t" //Load address Column 3 of C
 	" dup  v10.4s, wzr                           \n\t" // Vector for accummulating column 1
-	" prfm    PLDL1KEEP, [x1, #320]              \n\t"
-	" prfm pldl1keep,[x16]                       \n\t" // Prefetch c.
 	" add x20,x19,x10                            \n\t" //Load address Column 4 of C
 	" dup  v11.4s, wzr                           \n\t" // Vector for accummulating column 1
-	" prfm pldl1keep,[x16, #16]                  \n\t" // Prefetch c.
 	" dup  v12.4s, wzr                           \n\t" // Vector for accummulating column 2
-	" prfm pldl1keep,[x17]                       \n\t" // Prefetch c.
 	" add x21,x20,x10                            \n\t" //Load address Column 5 of C
 	" dup  v13.4s, wzr                           \n\t" // Vector for accummulating column 2
-	" prfm pldl1keep,[x17, #16]                  \n\t" // Prefetch c.
 	"                                            \n\t"
 	" dup  v14.4s, wzr                           \n\t" // Vector for accummulating column 3
-	" prfm    PLDL1KEEP, [x0, #128]              \n\t"
-	" prfm pldl1keep,[x19]                       \n\t" // Prefetch c.
 	" add x22,x21,x10                            \n\t" //Load address Column 6 of C
 	" dup  v15.4s, wzr                           \n\t" // Vector for accummulating column 3
-	" prfm    PLDL1KEEP, [x0, #192]              \n\t"
-	" prfm pldl1keep,[x19, #16]                  \n\t" // Prefetch c.
 	" dup  v16.4s, wzr                           \n\t" // Vector for accummulating column 4
-	" prfm pldl1keep,[x20]                       \n\t" // Prefetch c.
 	" add x23,x22,x10                            \n\t" //Load address Column 7 of C
 	" dup  v17.4s, wzr                           \n\t" // Vector for accummulating column 4
-	" prfm pldl1keep,[x20, #16]                  \n\t" // Prefetch c.
 	" dup  v18.4s, wzr                           \n\t" // Vector for accummulating column 5
-	" prfm pldl1keep,[x21]                       \n\t" // Prefetch c.
 	" add x24,x23,x10                            \n\t" //Load address Column 8 of C
 	" dup  v19.4s, wzr                           \n\t" // Vector for accummulating column 5
-	" prfm pldl1keep,[x21, #16]                  \n\t" // Prefetch c.
 	"                                            \n\t"
 	" dup  v20.4s, wzr                           \n\t" // Vector for accummulating column 6
-	" prfm pldl1keep,[x22]                       \n\t" // Prefetch c.
 	" add x25,x24,x10                            \n\t" //Load address Column 9 of C
 	" dup  v21.4s, wzr                           \n\t" // Vector for accummulating column 6
-	" prfm pldl1keep,[x22, #16]                  \n\t" // Prefetch c.
 	" dup  v22.4s, wzr                           \n\t" // Vector for accummulating column 7
-	" prfm pldl1keep,[x23]                       \n\t" // Prefetch c.
 	" add x26,x25,x10                            \n\t" //Load address Column 10 of C
 	" dup  v23.4s, wzr                           \n\t" // Vector for accummulating column 7
-	" prfm pldl1keep,[x23, #16]                  \n\t" // Prefetch c.
 	" dup  v24.4s, wzr                           \n\t" // Vector for accummulating column 8
-	" prfm pldl1keep,[x24]                       \n\t" // Prefetch c.
 	" add x27,x26,x10                            \n\t" //Load address Column 11 of C
 	" dup  v25.4s, wzr                           \n\t" // Vector for accummulating column 8
-	" prfm pldl1keep,[x24, #16]                  \n\t" // Prefetch c.
 	"                                            \n\t"
 	" dup  v26.4s, wzr                           \n\t" // Vector for accummulating column 9
-	" prfm pldl1keep,[x25]                       \n\t" // Prefetch c.
 	" dup  v27.4s, wzr                           \n\t" // Vector for accummulating column 9
-	" prfm pldl1keep,[x25, #16]                  \n\t" // Prefetch c.
 	" dup  v28.4s, wzr                           \n\t" // Vector for accummulating column 10
-	" prfm pldl1keep,[x26]                       \n\t" // Prefetch c.
 	" dup  v29.4s, wzr                           \n\t" // Vector for accummulating column 10
-	" prfm pldl1keep,[x26, #16]                  \n\t" // Prefetch c.
 	" dup  v30.4s, wzr                           \n\t" // Vector for accummulating column 11
-	" prfm pldl1keep,[x27]                       \n\t" // Prefetch c.
 	" dup  v31.4s, wzr                           \n\t" // Vector for accummulating column 11
-	" prfm pldl1keep,[x27, #16]                  \n\t" // Prefetch c.
 	"                                            \n\t"
 	"                                            \n\t"
 	" cmp x5,#0                                  \n\t" // If k_iter == 0, jump to k_left.
@@ -214,12 +359,9 @@ void bli_sgemm_m4sme_asm_8x12
 	" ldr q2, [x1]                               \n\t"
 	"                                            \n\t"
 	" fmla v16.4s,v0.4s,v3.s[0]                  \n\t" // Accummulate.
-	" prfm    PLDL1KEEP, [x1, #336]              \n\t"
 	" fmla v17.4s,v1.4s,v3.s[0]                  \n\t" // Accummulate.
-	" prfm    PLDL1KEEP, [x1, #400]              \n\t"
 	" fmla v18.4s,v0.4s,v3.s[1]                  \n\t" // Accummulate.
 	" fmla v19.4s,v1.4s,v3.s[1]                  \n\t" // Accummulate.
-	" prfm    PLDL1KEEP, [x1, #464]              \n\t"
 	" fmla v20.4s,v0.4s,v3.s[2]                  \n\t" // Accummulate.
 	" fmla v21.4s,v1.4s,v3.s[2]                  \n\t" // Accummulate.
 	" fmla v22.4s,v0.4s,v3.s[3]                  \n\t" // Accummulate.
@@ -251,9 +393,7 @@ void bli_sgemm_m4sme_asm_8x12
 	" ldr q2, [x1, #48]                          \n\t"
 	"                                            \n\t"
 	" fmla v16.4s,v5.4s,v3.s[0]                  \n\t" // Accummulate.
-	" prfm    PLDL1KEEP, [x0, #224]              \n\t"
 	" fmla v17.4s,v6.4s,v3.s[0]                  \n\t" // Accummulate.
-	" prfm    PLDL1KEEP, [x0, #288]              \n\t"
 	" fmla v18.4s,v5.4s,v3.s[1]                  \n\t" // Accummulate.
 	" fmla v19.4s,v6.4s,v3.s[1]                  \n\t" // Accummulate.
 	" fmla v20.4s,v5.4s,v3.s[2]                  \n\t" // Accummulate.
@@ -690,8 +830,6 @@ void bli_sgemm_m4sme_asm_8x12
 	"                                            \n\t"
 	LABEL (SBETAZEROCOLSTOREDS4)
 	"                                            \n\t"
-	" prfm pldl2keep,[x0]                        \n\t"
-	" prfm pldl2keep,[x1]                        \n\t"
 	"                                            \n\t"
 	" fmla v8.4s, v26.4s,v6.s[0]                 \n\t" // Scale by alpha
 	" fmla v9.4s, v27.4s,v6.s[0]                 \n\t" // Scale by alpha
@@ -1042,8 +1180,6 @@ void bli_sgemm_m4sme_asm_8x12
 	"                                            \n\t"
 	LABEL (SBETAZEROGENSTOREDS4)
 	"                                            \n\t"
-	" prfm pldl2keep,[x0]                        \n\t"
-	" prfm pldl2keep,[x1]                        \n\t"
 	"                                            \n\t"
 	" fmla v8.4s, v26.4s,v6.s[0]                 \n\t" // Scale by alpha
 	" fmla v9.4s, v27.4s,v6.s[0]                 \n\t" // Scale by alpha
@@ -1085,14 +1221,16 @@ void bli_sgemm_m4sme_asm_8x12
 	" st1 {v13.s}[2],[x5],x14                    \n\t" // Store c116  into quad and increment by rs_c.
 	" st1 {v13.s}[3],[x5],x14                    \n\t" // Store c147  into quad and increment by rs_c.
 	"                                            \n\t"
+	*/
 	LABEL (SEND)                                       // Done!
 	"                                            \n\t"
+	" smstop                                     \n\t"
 	:// output operands (none)
 	:// input operands
 	 [aaddr] "m" (a),       // 0
 	 [baddr] "m" (b),       // 1
 	 [caddr] "m" (c),       // 2
-	 [k_iter] "m" (k_iter), // 3
+	 [k] "m" (k), 			// 3
 	 [k_left] "m" (k_left), // 4
 	 [alpha] "m" (alpha),   // 5
 	 [beta] "m" (beta),     // 6
@@ -1105,7 +1243,7 @@ void bli_sgemm_m4sme_asm_8x12
 	 "x5", "x6", "x10", "x14",
 	 "x16", "x17", "x19", "x20",
 	 "x21", "x22", "x23", "x24",
-	 "x25", "x26", "x27",
+	 "x25", "x26", "x27", "w5",
 	 "v0", "v1", "v2", "v3",
 	 "v4", "v5", "v6", "v7",
 	 "v8", "v9", "v10", "v11",
@@ -1113,7 +1251,7 @@ void bli_sgemm_m4sme_asm_8x12
 	 "v16", "v17", "v18", "v19",
 	 "v20", "v21", "v22", "v23",
 	 "v24", "v25", "v26", "v27",
-	 "v28", "v29", "v30", "v31"
+	 "v28", "v29", "v30", "v31", "za"
 	);
 
 	GEMM_UKR_FLUSH_CT( s );
@@ -1207,62 +1345,39 @@ void bli_dgemm_m4sme_asm_6x8
 	"                                            \n\t"
 	"                                            \n\t"
 	" dup  v8.2d, xzr                            \n\t" // Vector for accummulating column 0
-	" prfm    PLDL1KEEP, [x1, #256]              \n\t"
 	" dup  v9.2d, xzr                            \n\t" // Vector for accummulating column 0
-	" prfm    PLDL1KEEP, [x1, #320]              \n\t"
 	" dup  v10.2d, xzr                           \n\t" // Vector for accummulating column 0
-	" prfm    PLDL1KEEP, [x1, #384]              \n\t"
 	" dup  v11.2d, xzr                           \n\t" // Vector for accummulating column 1
-	" prfm    PLDL1KEEP, [x1, #448]              \n\t"
 	" dup  v12.2d, xzr                           \n\t" // Vector for accummulating column 1
-	" prfm    PLDL1KEEP, [x0, #192]              \n\t"
 	" add x21,x20,x10                            \n\t" //Load address Column 2 of C
 	" dup  v13.2d, xzr                           \n\t" // Vector for accummulating column 1
-	" prfm    PLDL1KEEP, [x0, #256]              \n\t"
 	"                                            \n\t"
 	" dup  v14.2d, xzr                           \n\t" // Vector for accummulating column 2
-	" prfm    PLDL1KEEP, [x0, #320]              \n\t"
 	" add x22,x21,x10                            \n\t" //Load address Column 3 of C
 	" dup  v15.2d, xzr                           \n\t" // Vector for accummulating column 2
-	" prfm pldl1keep,[x2]                        \n\t" // Prefetch c.
 	" dup  v16.2d, xzr                           \n\t" // Vector for accummulating column 2
 	"                                            \n\t" // Since the columns can cross a cache line boundary,
 	                                                   // we also need to prefetch the "ends"
-	" prfm pldl1keep,[x2, #32]                   \n\t" // Prefetch c.
 	" add x23,x22,x10                            \n\t" //Load address Column 4 of C
 	" dup  v17.2d, xzr                           \n\t" // Vector for accummulating column 3
-	" prfm pldl1keep,[x20]                       \n\t" // Prefetch c.
 	" dup  v18.2d, xzr                           \n\t" // Vector for accummulating column 3
-	" prfm pldl1keep,[x20, #32]                  \n\t" // Prefetch c.
 	" add x24,x23,x10                            \n\t" //Load address Column 5 of C
 	" dup  v19.2d, xzr                           \n\t" // Vector for accummulating column 3
-	" prfm pldl1keep,[x21]                       \n\t" // Prefetch c.
 	"                                            \n\t"
 	" dup  v20.2d, xzr                           \n\t" // Vector for accummulating column 4
-	" prfm pldl1keep,[x21, #32]                  \n\t" // Prefetch c.
 	" add x25,x24,x10                            \n\t" //Load address Column 6 of C
 	" dup  v21.2d, xzr                           \n\t" // Vector for accummulating column 4
-	" prfm pldl1keep,[x22]                       \n\t" // Prefetch c.
 	" dup  v22.2d, xzr                           \n\t" // Vector for accummulating column 4
-	" prfm pldl1keep,[x22, #32]                  \n\t" // Prefetch c.
 	" add x26,x25,x10                            \n\t" //Load address Column 7 of C
 	" dup  v23.2d, xzr                           \n\t" // Vector for accummulating column 5
-	" prfm pldl1keep,[x23]                       \n\t" // Prefetch c.
 	" dup  v24.2d, xzr                           \n\t" // Vector for accummulating column 5
-	" prfm pldl1keep,[x23, #32]                  \n\t" // Prefetch c.
 	" dup  v25.2d, xzr                           \n\t" // Vector for accummulating column 5
-	" prfm pldl1keep,[x24]                       \n\t" // Prefetch c.
 	"                                            \n\t"
 	" dup  v26.2d, xzr                           \n\t" // Vector for accummulating column 6
-	" prfm pldl1keep,[x24, #32]                  \n\t" // Prefetch c.
 	" dup  v27.2d, xzr                           \n\t" // Vector for accummulating column 6
-	" prfm pldl1keep,[x25]                       \n\t" // Prefetch c.
 	" dup  v28.2d, xzr                           \n\t" // Vector for accummulating column 6
-	" prfm pldl1keep,[x25, #32]                  \n\t" // Prefetch c.
 	" dup  v29.2d, xzr                           \n\t" // Vector for accummulating column 7
-	" prfm pldl1keep,[x26]                       \n\t" // Prefetch c.
 	" dup  v30.2d, xzr                           \n\t" // Vector for accummulating column 7
-	" prfm pldl1keep,[x26, #32]                  \n\t" // Prefetch c.
 	" dup  v31.2d, xzr                           \n\t" // Vector for accummulating column 7
 	"                                            \n\t"
 	"                                            \n\t"
@@ -1287,11 +1402,8 @@ void bli_dgemm_m4sme_asm_6x8
 	LABEL (DLOOP)                                      // Body
 	"                                            \n\t"
 	" fmla v8.2d ,v0.2d,v3.d[0]                  \n\t" // Accummulate
-	" prfm    PLDL1KEEP, [x1, #448]              \n\t" //512-64=448
 	" fmla v9.2d ,v1.2d,v3.d[0]                  \n\t" // Accummulate
-	" prfm    PLDL1KEEP, [x1, #512]              \n\t"
 	" fmla v10.2d,v2.2d,v3.d[0]                  \n\t" // Accummulate
-	" prfm    PLDL1KEEP, [x1, #576]              \n\t"
 	"                                            \n\t"
 	" fmla v11.2d,v0.2d,v3.d[1]                  \n\t" // Accummulate
 	" fmla v12.2d,v1.2d,v3.d[1]                  \n\t" // Accummulate
@@ -1330,11 +1442,8 @@ void bli_dgemm_m4sme_asm_6x8
 	" ldr q6, [x1, #48]                          \n\t"
 	"                                            \n\t" // End it 1
 	" fmla v8.2d ,v0.2d,v3.d[0]                  \n\t" // Accummulate
-	" prfm    PLDL1KEEP, [x1, #640]              \n\t"
 	" fmla v9.2d ,v1.2d,v3.d[0]                  \n\t" // Accummulate
-	" prfm    PLDL1KEEP, [x0, #336]              \n\t"
 	" fmla v10.2d,v7.2d,v3.d[0]                  \n\t" // Accummulate
-	" prfm    PLDL1KEEP, [x0, #400]              \n\t"
 	"                                            \n\t"
 	" fmla v11.2d,v0.2d,v3.d[1]                  \n\t" // Accummulate
 	" fmla v12.2d,v1.2d,v3.d[1]                  \n\t" // Accummulate
@@ -1373,7 +1482,6 @@ void bli_dgemm_m4sme_asm_6x8
 	" ldr q6, [x1, #112]                         \n\t"
 	"                                            \n\t" //End it 2
 	" fmla v8.2d ,v0.2d,v3.d[0]                  \n\t" // Accummulate
-	" prfm    PLDL1KEEP, [x0, #464]              \n\t"
 	" fmla v9.2d ,v1.2d,v3.d[0]                  \n\t" // Accummulate
 	" fmla v10.2d,v2.2d,v3.d[0]                  \n\t" // Accummulate
 	"                                            \n\t"
@@ -1840,8 +1948,6 @@ void bli_dgemm_m4sme_asm_6x8
 	"                                            \n\t"
 	LABEL (DBETAZEROCOLSTOREDS4)
 	"                                            \n\t"
-	" prfm pldl2keep,[x0]                        \n\t"
-	" prfm pldl2keep,[x1]                        \n\t"
 	"                                            \n\t"
 	" fmla v8.2d, v26.2d,v6.d[0]                 \n\t" // Scale by alpha
 	" fmla v9.2d, v27.2d,v6.d[0]                 \n\t" // Scale by alpha
@@ -2085,8 +2191,6 @@ void bli_dgemm_m4sme_asm_6x8
 	"                                            \n\t"
 	LABEL (DBETAZEROGENSTOREDS4)
 	"                                            \n\t"
-	" prfm pldl2keep,[x0]                        \n\t"
-	" prfm pldl2keep,[x1]                        \n\t"
 	"                                            \n\t"
 	" fmla v8.2d, v26.2d,v6.d[0]                 \n\t" // Scale by alpha
 	" fmla v9.2d, v27.2d,v6.d[0]                 \n\t" // Scale by alpha
