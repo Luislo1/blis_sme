@@ -210,8 +210,10 @@ void libblis_test_gemm_experiment
 
 	// Set alpha and beta.
 	{
-		bli_setsc(  2.0,  0.2, &alpha );
-		bli_setsc(  1.2,  0.5, &beta );
+		//bli_setsc(  2.0,  0.2, &alpha );
+		//bli_setsc(  1.2,  0.5, &beta );
+		bli_setsc(  1.0,  1.0, &alpha );
+		bli_setsc(  0.0,  0.0, &beta );
 		//bli_setsc(  1.0,  0.0, &alpha );
 		//bli_setsc(  1.0,  0.0, &beta );
 	}
@@ -281,12 +283,13 @@ bli_printm( "c", c, "%5.2f", "" );
 #endif
 //if ( bli_obj_length( b ) == 16 &&
 //     bli_obj_stor3_from_strides( c, a, b ) == BLIS_CRR )
-//bli_printm( "c before", c, "%6.3f", "" );
+//bli_printm( "c before", c, "%.3e", "" );
 		bli_gemm( alpha, a, b, beta, c );
 		//bls_gemm( alpha, a, b, beta, c );
-#if 0
-if ( bli_obj_dt( c ) == BLIS_DCOMPLEX )
-bli_printm( "c after", c, "%6.3f", "" );
+#if 1
+//bli_printm( "a after", a, "%.3e", "" );
+//bli_printm( "b after", b, "%.3e", "" );
+//bli_printm( "c after", c, "%.3e", "" );
 #endif
 //bli_printm( "c after", c, "%5.2f", "" );
 		break;
