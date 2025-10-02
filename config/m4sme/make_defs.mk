@@ -72,7 +72,7 @@ CKVECFLAGS     :=  -march=native+sme2 -fno-exceptions -fno-rtti -mno-unaligned-a
 else
 ifeq ($(CC_VENDOR),clang)
 # CKVECFLAGS     := -mcpu=cortex-a57
-CKVECFLAGS     :=  -march=native-a+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access 
+CKVECFLAGS     :=  -O3 -march=native-a+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access 
 else
 $(error gcc or clang is required for this configuration.)
 endif
