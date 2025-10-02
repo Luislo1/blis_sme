@@ -40,6 +40,8 @@
 
 #define BLIS_SIMD_ALIGN_SIZE           16
 
+#define BLIS_SIMD_MAX_SIZE             (64*64)
+#define BLIS_SIMD_MAX_NUM_REGISTERS    32
 
 #if 0
 // -- LEVEL-3 MICRO-KERNEL CONSTANTS -------------------------------------------

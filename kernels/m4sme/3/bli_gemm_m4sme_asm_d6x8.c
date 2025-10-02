@@ -155,33 +155,84 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 	svzero_za();
 
 	for (uint64_t k_ = 0; k_ < k; k_++) {
-                svfloat32_t zL = svld1(svptrue_b32(), (float32_t*)(&a_[k_ * SVL]));
-                svfloat32_t zR = svld1(svptrue_b32(), (float32_t*)(&b_[k_ * n  ]));
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL, zR);
+		// Loads.
+                svfloat32_t zL0 = svld1(svptrue_b32(), (float32_t*)(&a_[k_ * (2*SVL)      ]));
+                svfloat32_t zR0 = svld1(svptrue_b32(), (float32_t*)(&b_[k_ * (2*SVL)      ]));
+		//
+                svfloat32_t zL1 = svld1(svptrue_b32(), (float32_t*)(&a_[k_ * (2*SVL) + SVL]));
+                svfloat32_t zR1 = svld1(svptrue_b32(), (float32_t*)(&b_[k_ * (2*SVL) + SVL]));
+		// FMOPAs
+		// TL.
+                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL0, zR0);
+		// BL.
+                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL1, zR0);
+		// TR.
+                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL0, zR1);
+		// BR.
+                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL1, zR1);
 	}
 
 	// Store ZA to matResult.
-        const uint64_t result_tile_UL_corner = 0;
+        const uint64_t result_tile_TL_corner = 0;
+        const uint64_t result_tile_BL_corner = SVL;
+        const uint64_t result_tile_TR_corner = SVL * cs_c0;
+        const uint64_t result_tile_BR_corner = SVL * cs_c0 + SVL;
 #if 1
         for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
-                svbool_t p0 = svpsel_lane_b32(pNDim, pMDim, tcol + 0);
-                svbool_t p1 = svpsel_lane_b32(pNDim, pMDim, tcol + 1);
-                svbool_t p2 = svpsel_lane_b32(pNDim, pMDim, tcol + 2);
-                svbool_t p3 = svpsel_lane_b32(pNDim, pMDim, tcol + 3);
-
 		//printf("tcol: %d\n", tcol);
+		// TL.
                 svst1_ver_za32(
                     /* tile: */ 0, /* slice: */ tcol + 0, svptrue_b32(),
-                    &c_[result_tile_UL_corner + (tcol + 0) * cs_c0]);
+                    &c_[result_tile_TL_corner + (tcol + 0) * cs_c0]);
                 svst1_ver_za32(
                     /* tile: */ 0, /* slice: */ tcol + 1, svptrue_b32(),
-                    &c_[result_tile_UL_corner + (tcol + 1) * cs_c0]);
+                    &c_[result_tile_TL_corner + (tcol + 1) * cs_c0]);
                 svst1_ver_za32(
                     /* tile: */ 0, /* slice: */ tcol + 2, svptrue_b32(),
-                    &c_[result_tile_UL_corner + (tcol + 2) * cs_c0]);
+                    &c_[result_tile_TL_corner + (tcol + 2) * cs_c0]);
                 svst1_ver_za32(
                     /* tile: */ 0, /* slice: */ tcol + 3, svptrue_b32(),
-                    &c_[result_tile_UL_corner + (tcol + 3) * cs_c0]);
+                    &c_[result_tile_TL_corner + (tcol + 3) * cs_c0]);
+		// BL.
+                svst1_ver_za32(
+                    /* tile: */ 1, /* slice: */ tcol + 0, svptrue_b32(),
+                    &c_[result_tile_BL_corner + (tcol + 0) * cs_c0]);
+                svst1_ver_za32(
+                    /* tile: */ 1, /* slice: */ tcol + 1, svptrue_b32(),
+                    &c_[result_tile_BL_corner + (tcol + 1) * cs_c0]);
+                svst1_ver_za32(
+                    /* tile: */ 1, /* slice: */ tcol + 2, svptrue_b32(),
+                    &c_[result_tile_BL_corner + (tcol + 2) * cs_c0]);
+                svst1_ver_za32(
+                    /* tile: */ 1, /* slice: */ tcol + 3, svptrue_b32(),
+                    &c_[result_tile_BL_corner + (tcol + 3) * cs_c0]);
+		// TR.
+                svst1_ver_za32(
+                    /* tile: */ 2, /* slice: */ tcol + 0, svptrue_b32(),
+                    &c_[result_tile_TR_corner + (tcol + 0) * cs_c0]);
+                svst1_ver_za32(
+                    /* tile: */ 2, /* slice: */ tcol + 1, svptrue_b32(),
+                    &c_[result_tile_TR_corner + (tcol + 1) * cs_c0]);
+                svst1_ver_za32(
+                    /* tile: */ 2, /* slice: */ tcol + 2, svptrue_b32(),
+                    &c_[result_tile_TR_corner + (tcol + 2) * cs_c0]);
+                svst1_ver_za32(
+                    /* tile: */ 2, /* slice: */ tcol + 3, svptrue_b32(),
+                    &c_[result_tile_TR_corner + (tcol + 3) * cs_c0]);
+		// BR.
+                svst1_ver_za32(
+                    /* tile: */ 3, /* slice: */ tcol + 0, svptrue_b32(),
+                    &c_[result_tile_BR_corner + (tcol + 0) * cs_c0]);
+                svst1_ver_za32(
+                    /* tile: */ 3, /* slice: */ tcol + 1, svptrue_b32(),
+                    &c_[result_tile_BR_corner + (tcol + 1) * cs_c0]);
+                svst1_ver_za32(
+                    /* tile: */ 3, /* slice: */ tcol + 2, svptrue_b32(),
+                    &c_[result_tile_BR_corner + (tcol + 2) * cs_c0]);
+                svst1_ver_za32(
+                    /* tile: */ 3, /* slice: */ tcol + 3, svptrue_b32(),
+                    &c_[result_tile_BR_corner + (tcol + 3) * cs_c0]);
+
         }
 #endif
 	return;
