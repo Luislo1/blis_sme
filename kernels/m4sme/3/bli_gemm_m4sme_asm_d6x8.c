@@ -37,6 +37,11 @@
 #include <arm_sme.h>
 #include "m4sme_asm_utils.h"
 
+#define SVPRFOP_READ   0
+#define SVPRFOP_WRITE  1
+#define SVPRFOP_STRM   2
+#define SVPRFOP_NOP    3
+
 // #define DISPLAY_DEBUG_INFO
 
 // Added prefetch fix for non-cacheline aligned C columns
@@ -154,22 +159,64 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 
 	svzero_za();
 
-	for (uint64_t k_ = 0; k_ < k; k_++) {
+	//__arm_mtx_prefetch_read_za(0);
+	//__arm_mtx_prefetch_write_za(0);
+
+	for (uint64_t k_ = 0; k_ < k; k_+=4) {
+		// Aplica prefetch explícito para lectura
+        	svprfb(svptrue_b32(), &a_[(k_+1) * (2*SVL)      ], 0);
+        	svprfb(svptrue_b32(), &a_[(k_+2) * (2*SVL)      ], 0);
+        	svprfb(svptrue_b32(), &a_[(k_+3) * (2*SVL)      ], 0);
+
+        	svprfb(svptrue_b32(), &b_[(k_+1) * (2*SVL)      ], 0);
+        	svprfb(svptrue_b32(), &b_[(k_+2) * (2*SVL)      ], 0);
+        	svprfb(svptrue_b32(), &b_[(k_+3) * (2*SVL)      ], 0);
+
 		// Loads.
-                svfloat32_t zL0 = svld1(svptrue_b32(), (float32_t*)(&a_[k_ * (2*SVL)      ]));
-                svfloat32_t zR0 = svld1(svptrue_b32(), (float32_t*)(&b_[k_ * (2*SVL)      ]));
-		//
-                svfloat32_t zL1 = svld1(svptrue_b32(), (float32_t*)(&a_[k_ * (2*SVL) + SVL]));
-                svfloat32_t zR1 = svld1(svptrue_b32(), (float32_t*)(&b_[k_ * (2*SVL) + SVL]));
+                svfloat32_t zL00 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+0) * (2*SVL)      ]));
+                svfloat32_t zR00 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+0) * (2*SVL)      ]));
+                svfloat32_t zL10 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+0) * (2*SVL) + SVL]));
+                svfloat32_t zR10 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+0) * (2*SVL) + SVL]));
+
+                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL00, zR00);
+                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL10, zR00);
+                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL00, zR10);
+                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL10, zR10);
+
+                svfloat32_t zL01 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+1) * (2*SVL)      ]));
+                svfloat32_t zR01 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+1) * (2*SVL)      ]));
+                svfloat32_t zL11 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+1) * (2*SVL) + SVL]));
+                svfloat32_t zR11 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+1) * (2*SVL) + SVL]));
+
+                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL01, zR01);
+                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL11, zR01);
+                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL01, zR11);
+                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL11, zR11);
+
+                svfloat32_t zL02 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+2) * (2*SVL)      ]));
+                svfloat32_t zR02 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+2) * (2*SVL)      ]));
+                svfloat32_t zL12 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+2) * (2*SVL) + SVL]));
+                svfloat32_t zR12 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+2) * (2*SVL) + SVL]));
+
+                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL02, zR02);
+                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL12, zR02);
+                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL02, zR12);
+                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL12, zR12);
+
+                svfloat32_t zL03 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+3) * (2*SVL)      ]));
+                svfloat32_t zR03 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+3) * (2*SVL)      ]));
+                svfloat32_t zL13 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+3) * (2*SVL) + SVL]));
+                svfloat32_t zR13 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+3) * (2*SVL) + SVL]));
+
 		// FMOPAs
 		// TL.
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL0, zR0);
+                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL03, zR03);
 		// BL.
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL1, zR0);
+                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL13, zR03);
 		// TR.
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL0, zR1);
+                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL03, zR13);
 		// BR.
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL1, zR1);
+                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL13, zR13);
 	}
 
 	// Store ZA to matResult.

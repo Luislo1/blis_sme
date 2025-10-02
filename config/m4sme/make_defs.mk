@@ -46,7 +46,7 @@ THIS_CONFIG    := m4sme
 # general-purpose/configuration-agnostic flags in common.mk. You
 # may specify additional flags here as needed.
 CPPROCFLAGS    := -D_GNU_SOURCE
-CMISCFLAGS     := -O2 -std=c99 -march=native+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access
+CMISCFLAGS     := -O3 -std=c99 -march=native+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access
 CPICFLAGS      := -fPIC
 CWARNFLAGS     :=
 
@@ -55,11 +55,11 @@ CDBGFLAGS      := -g
 endif
 
 ifeq ($(DEBUG_TYPE),noopt)
-COPTFLAGS      := -O2
+COPTFLAGS      := -O3
 else
-# COPTFLAGS      := -O2 -mcpu=cortex-a57
-#COPTFLAGS      := -O2 -march=armv9.2-a+sme2p1+sme-f64f64+sme-i16i64+sme-f16f16
-COPTFLAGS      :=  -O2 -std=c99 -march=native+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access
+# COPTFLAGS      := -O3 -mcpu=cortex-a57
+#COPTFLAGS      := -O3 -march=armv9.2-a+sme2p1+sme-f64f64+sme-i16i64+sme-f16f16
+COPTFLAGS      :=  -O3 -std=c99 -march=native+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access
 
 endif
 
