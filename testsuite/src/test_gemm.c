@@ -210,10 +210,10 @@ void libblis_test_gemm_experiment
 
 	// Set alpha and beta.
 	{
-		//bli_setsc(  2.0,  0.2, &alpha );
-		//bli_setsc(  1.2,  0.5, &beta );
-		bli_setsc(  1.0,  1.0, &alpha );
-		bli_setsc(  0.0,  0.0, &beta );
+		bli_setsc(  2.0,  0.2, &alpha );
+		bli_setsc(  1.2,  0.5, &beta );
+//		bli_setsc(  1.0,  1.0, &alpha );
+//		bli_setsc(  0.0,  0.0, &beta );
 		//bli_setsc(  1.0,  0.0, &alpha );
 		//bli_setsc(  1.0,  0.0, &beta );
 	}
