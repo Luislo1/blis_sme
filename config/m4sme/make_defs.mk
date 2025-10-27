@@ -68,11 +68,11 @@ endif
 # CKOPTFLAGS     := $(COPTFLAGS) -O3 -ftree-vectorize
 ifeq ($(CC_VENDOR),gcc)
 # CKVECFLAGS     := -mcpu=cortex-a57
-CKVECFLAGS     :=  -march=native+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access
+CKVECFLAGS     :=  -march=native+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access -fno-builtin
 else
 ifeq ($(CC_VENDOR),clang)
 # CKVECFLAGS     := -mcpu=cortex-a57
-CKVECFLAGS     :=  -O3 -march=native-a+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access 
+CKVECFLAGS     :=  -O3 -march=native-a+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access -fno-builtin 
 else
 $(error gcc or clang is required for this configuration.)
 endif
@@ -93,4 +93,5 @@ endif
 # Store all of the variables here to new variables containing the
 # configuration name.
 $(eval $(call store-make-defs,$(THIS_CONFIG)))
+
 
