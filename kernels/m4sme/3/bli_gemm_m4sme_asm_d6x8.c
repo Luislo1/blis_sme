@@ -172,64 +172,48 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
         	//svprfb(svptrue_b32(), &b_[(k_+2) * (2*SVL)      ], 0);
 
 		// Loads.
-                svfloat32_t zL00 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+0) * (SVL)      ]));
-                svfloat32_t zR00 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+0) * (4*SVL)      ]));
-                svfloat32_t zR10 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+0) * (4*SVL) + SVL]));
-                svfloat32_t zR20 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+0) * (4*SVL) + (2*SVL)]));
-                svfloat32_t zR30 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+0) * (4*SVL) + (3*SVL)]));
+                svfloat32x4_t zL00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(k_+0) * (SVL)      ]));
+
+				svfloat32x4_t zR00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(k_+0) * (4*SVL)      ]));
 
         	// svprfb(svptrue_b32(), &a_[(k_+3) * (SVL)      ], 0);
 		// Prefetch (dudo si funciona).
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL00, zR00);
+                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 0));
 		// Prefetch (dudo si funciona).
         	// svprfb(svptrue_b32(), &b_[(k_+3) * (4*SVL)      ], 0);
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL00, zR10);
+                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 1));
 
-                svfloat32_t zL01 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+1) * (SVL)      ]));
-                svfloat32_t zR01 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+1) * (4*SVL)      ]));
+				svfloat32x4_t zR01 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(k_+1) * (4*SVL)      ]));
 
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL00, zR20);
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL00, zR30);
+                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 2));
+                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 3));
 
-                svfloat32_t zR11 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+1) * (4*SVL) + SVL]));
-                svfloat32_t zR21 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+1) * (4*SVL) + (2*SVL)]));
-                svfloat32_t zR31 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+1) * (4*SVL) + (3*SVL)]));
+                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 0));
+                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 1));
 
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL01, zR01);
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL01, zR11);
+                svfloat32x4_t zR02 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(k_+2) * (4*SVL)      ]));
 
-                svfloat32_t zL02 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+2) * (SVL)      ]));
-                svfloat32_t zR02 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+2) * (4*SVL)      ]));
-
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL01, zR21);
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL01, zR31);
-
-                svfloat32_t zR12 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+2) * (4*SVL) + SVL]));
-                svfloat32_t zR22 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+2) * (4*SVL) + (2*SVL)]));
-                svfloat32_t zR32 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+2) * (4*SVL) + (3*SVL)]));
-
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL02, zR02);
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL02, zR12);
-
-                svfloat32_t zL03 = svld1(svptrue_b32(), (float32_t*)(&a_[(k_+3) * (SVL)      ]));
-                svfloat32_t zR03 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+3) * (4*SVL)      ]));
-
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL02, zR22);
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL02, zR32);
-
-                svfloat32_t zR13 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+3) * (4*SVL) + SVL]));
-                svfloat32_t zR23 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+3) * (4*SVL) + (2*SVL)]));
-                svfloat32_t zR33 = svld1(svptrue_b32(), (float32_t*)(&b_[(k_+3) * (4*SVL) + (3*SVL)]));
+                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 2));
+                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 3));
 
 
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL03, zR03);
+                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,0));
+                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,1));
+
+                svfloat32x4_t zR03 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(k_+3) * (4*SVL)      ]));
+
+                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,2));
+                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,3));
+
+
+                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,0));
 		// Prefetch (dudo si funciona).
         	 svprfb(svptrue_b32(), (float*)&a_next, 0);
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL03, zR13);
+                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,1));
 		// Prefetch (dudo si funciona).
         	 svprfb(svptrue_b32(), (float*)&b_next, 0);
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL03, zR23);
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL03, zR33);
+                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,2));
+                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,3));
 	}
 		// Store ZA to matResult.
 
@@ -264,9 +248,10 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 			z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
 			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
 			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
-
-
-							//Load C into Z regs
+				//no nos sirve
+			//svfloat32x2_t zq5 = svld1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (((tcol + 0) * cs_c0))]);
+				
+			//Load C into Z regs
 			svfloat32_t z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c0]);
 			svfloat32_t z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 0) * cs_c0]);
 			svfloat32_t z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 0) * cs_c0]);
@@ -281,6 +266,11 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 
 			//TODO explorar hacer estas instrucciones con vector groups x4 o x2 (svuint32x4_t en fp)
 			//Store full result into C
+			
+				//no nos sirve tampoco
+			// svfloat32x2_t z400 = svcreate2(z4, z5);
+			// svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c0], z400);
+
 			svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c0], z4);
 			svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 0) * cs_c0], z5);
 			svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 0) * cs_c0], z6);
@@ -1391,5 +1381,6 @@ void bli_dgemm_m4sme_asm_6x8
 
 	GEMM_UKR_FLUSH_CT( d );
 }
+
 
 
