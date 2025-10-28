@@ -77,8 +77,8 @@ void		bli_spackm_m4sme_int_8x12
 	float	       *restrict p_ = (float *)p;
 
 	uint64_t	SVL = svcntsw();
-	svfloat32x4_t	tmp;
-	// svfloat32_t	tmp;
+	// svfloat32x4_t	tmp;
+	svfloat32_t	tmp;
 
 	const float    *restrict alpha1 = a;
 	float	       *restrict pi1 = p;
@@ -92,10 +92,10 @@ void		bli_spackm_m4sme_int_8x12
 			{
 				// printf("Pack A\n");
 				for (dim_t k = n; k != 0; --k) {
-					// tmp = svld1_f32(svptrue_b32(), alpha1);
-					// svst1_f32(svptrue_b32(), pi1, tmp);
-					tmp = svld1_f32_x4(svptrue_c32(), alpha1);
-					svst1_f32_x4(svptrue_c32(), pi1, tmp);
+					tmp = svld1_f32(svptrue_b32(), alpha1);
+					svst1_f32(svptrue_b32(), pi1, tmp);
+					// tmp = svld1_f32_x4(svptrue_c32(), alpha1);
+					// svst1_f32_x4(svptrue_c32(), pi1, tmp);
 
 
 					alpha1 += lda;
@@ -252,4 +252,5 @@ void		bli_spackm_m4sme_int_8x12
 		 p_, ldp
 		);
 }
+
 
