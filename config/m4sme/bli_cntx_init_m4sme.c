@@ -61,16 +61,16 @@ void bli_cntx_init_m4sme( cntx_t* cntx )
 	  cntx,
 
 	  // level-3
-	  BLIS_GEMM_UKR_ROW_PREF, BLIS_FLOAT,  FALSE,
-	  BLIS_GEMM_UKR_ROW_PREF, BLIS_DOUBLE, FALSE,
+	  BLIS_GEMM_UKR_ROW_PREF, BLIS_FLOAT,  TRUE,
+	  BLIS_GEMM_UKR_ROW_PREF, BLIS_DOUBLE, TRUE,
 
 	  BLIS_VA_END
 	);
 
 	// Initialize level-3 blocksize objects with architecture-specific values.
 	//                                           s      d      c      z
-	bli_blksz_init_easy( &blkszs[ BLIS_MR ],    16,     6,    -1,    -1 );
-	bli_blksz_init_easy( &blkszs[ BLIS_NR ],    64,     8,    -1,    -1 );
+	bli_blksz_init_easy( &blkszs[ BLIS_MR ],    64,     6,    -1,    -1 );
+	bli_blksz_init_easy( &blkszs[ BLIS_NR ],    16,     8,    -1,    -1 );
 	bli_blksz_init_easy( &blkszs[ BLIS_MC ],   1280 /*160 or 640 good also*/,   120,    -1,    -1 );
 	bli_blksz_init_easy( &blkszs[ BLIS_KC ],   1280/*640*/,   240,    -1,    -1 );
 	bli_blksz_init_easy( &blkszs[ BLIS_NC ], 10240,  3072,    -1,    -1 );
@@ -91,5 +91,6 @@ void bli_cntx_init_m4sme( cntx_t* cntx )
 	  BLIS_VA_END
 	);
 }
+
 
 
