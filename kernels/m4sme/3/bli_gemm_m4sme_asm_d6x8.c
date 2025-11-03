@@ -216,122 +216,123 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 		float beta_ = *(float*) beta;
 		float alpha_ = *(float*) alpha;
         const uint64_t result_tile_TL_corner = 0;
-        //const uint64_t result_tile_BL_corner = SVL;
-        const uint64_t result_tile_TR_corner = SVL * cs_c0;
         //const uint64_t result_tile_BR_corner = SVL * cs_c0 + SVL;
 		svfloat32_t zbeta = svdup_f32(beta_);
 		svfloat32_t zalpha = svdup_f32(alpha_);
-	if (beta_ == 0) {
+	if (rs_c0 == 1) {
+        const uint64_t result_tile_TR_corner = SVL * cs_c0;
+
+		if (beta_ == 0) {
 			for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
-			//Read ZA slices into Z regs
-			svfloat32x4_t z00 = svread_ver_za32_f32_vg4(
-				/* tile: */ 0, /* slice: */ tcol + 0);
+				//Read ZA slices into Z regs
+				// svfloat32x4_t z00 = svread_ver_za32_f32_vg4(
+				// 	/* tile: */ 0, /* slice: */ tcol + 0);
 
-			svfloat32_t z0 = svread_ver_za32_m(
-				z0, svptrue_b32(),
-				/* tile: */ 0, /* slice: */ tcol + 0);
-			svfloat32_t z1 = svread_ver_za32_m(
-				z1, svptrue_b32(),
-				/* tile: */ 1, /* slice: */ tcol + 0);
-			svfloat32_t z2 = svread_ver_za32_m(
-				z2, svptrue_b32(),
-				/* tile: */ 2, /* slice: */ tcol + 0);
-			svfloat32_t z3 = svread_ver_za32_m(
-				z3, svptrue_b32(),
-				/* tile: */ 3, /* slice: */ tcol + 0);
+				svfloat32_t z0 = svread_ver_za32_m(
+					z0, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 0);
+				svfloat32_t z1 = svread_ver_za32_m(
+					z1, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 0);
+				svfloat32_t z2 = svread_ver_za32_m(
+					z2, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 0);
+				svfloat32_t z3 = svread_ver_za32_m(
+					z3, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 0);
 
-			//Scale Z regs by broadcast alpha
-			z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 0), zalpha);
-			z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
-			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
-			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+				//Scale Z regs by broadcast alpha
+				z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+				z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+				z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+				z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
 
-			//Store full result into C
-			svfloat32x2_t z400 = svcreate2(z0, z1);
-			svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c0], z400);
+				//Store full result into C
+				svfloat32x2_t z400 = svcreate2(z0, z1);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c0], z400);
 
-			svfloat32x2_t z600 = svcreate2(z2, z3);
-			svst1_f32_x2(svptrue_c32(), &c_[result_tile_TR_corner + (tcol + 0) * cs_c0], z600);
-			
-			//Repeat unfolded x4
-			z0 = svread_ver_za32_m(
-				z0, svptrue_b32(),
-				/* tile: */ 0, /* slice: */ tcol + 1);
-			z1 = svread_ver_za32_m(
-				z1, svptrue_b32(),
-				/* tile: */ 1, /* slice: */ tcol + 1);
-			z2 = svread_ver_za32_m(
-				z2, svptrue_b32(),
-				/* tile: */ 2, /* slice: */ tcol + 1);
-			z3 = svread_ver_za32_m(
-				z3, svptrue_b32(),
-				/* tile: */ 3, /* slice: */ tcol + 1);
+				svfloat32x2_t z600 = svcreate2(z2, z3);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TR_corner + (tcol + 0) * cs_c0], z600);
+				
+				//Repeat unfolded x4
+				z0 = svread_ver_za32_m(
+					z0, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 1);
+				z1 = svread_ver_za32_m(
+					z1, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 1);
+				z2 = svread_ver_za32_m(
+					z2, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 1);
+				z3 = svread_ver_za32_m(
+					z3, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 1);
 
-			//z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 1), zalpha);
-			z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
-			z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
-			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
-			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
-			
-			z400 = svcreate2(z0, z1);
-			svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 1) * cs_c0], z400);
+				//z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 1), zalpha);
+				z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+				z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+				z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+				z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+				
+				z400 = svcreate2(z0, z1);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 1) * cs_c0], z400);
 
-			z600 = svcreate2(z2, z3);
-			svst1_f32_x2(svptrue_c32(), &c_[result_tile_TR_corner + (tcol + 1) * cs_c0], z600);
+				z600 = svcreate2(z2, z3);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TR_corner + (tcol + 1) * cs_c0], z600);
 
-			z0 = svread_ver_za32_m(
-				z0, svptrue_b32(),
-				/* tile: */ 0, /* slice: */ tcol + 2);
-			z1 = svread_ver_za32_m(
-				z1, svptrue_b32(),
-				/* tile: */ 1, /* slice: */ tcol + 2);
-			z2 = svread_ver_za32_m(
-				z2, svptrue_b32(),
-				/* tile: */ 2, /* slice: */ tcol + 2);
-			z3 = svread_ver_za32_m(
-				z3, svptrue_b32(),
-				/* tile: */ 3, /* slice: */ tcol + 2);
+				z0 = svread_ver_za32_m(
+					z0, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 2);
+				z1 = svread_ver_za32_m(
+					z1, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 2);
+				z2 = svread_ver_za32_m(
+					z2, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 2);
+				z3 = svread_ver_za32_m(
+					z3, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 2);
 
-			//z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 2), zalpha);
-			z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
-			z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
-			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
-			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+				//z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 2), zalpha);
+				z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+				z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+				z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+				z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
 
-			z400 = svcreate2(z0, z1);
-			svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 2) * cs_c0], z400);
+				z400 = svcreate2(z0, z1);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 2) * cs_c0], z400);
 
-			z600 = svcreate2(z2, z3);
-			svst1_f32_x2(svptrue_c32(), &c_[result_tile_TR_corner + (tcol + 2) * cs_c0], z600);
+				z600 = svcreate2(z2, z3);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TR_corner + (tcol + 2) * cs_c0], z600);
 
-			z0 = svread_ver_za32_m(
-				z0, svptrue_b32(),
-				/* tile: */ 0, /* slice: */ tcol + 3);
-			z1 = svread_ver_za32_m(
-				z1, svptrue_b32(),
-				/* tile: */ 1, /* slice: */ tcol + 3);
-			z2 = svread_ver_za32_m(
-				z2, svptrue_b32(),
-				/* tile: */ 2, /* slice: */ tcol + 3);
-			z3 = svread_ver_za32_m(
-				z3, svptrue_b32(),
-				/* tile: */ 3, /* slice: */ tcol + 3);
+				z0 = svread_ver_za32_m(
+					z0, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 3);
+				z1 = svread_ver_za32_m(
+					z1, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 3);
+				z2 = svread_ver_za32_m(
+					z2, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 3);
+				z3 = svread_ver_za32_m(
+					z3, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 3);
 
-			// z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 3), zalpha);
-			z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
-			z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
-			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
-			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+				// z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 3), zalpha);
+				z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+				z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+				z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+				z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
 
-			z400 = svcreate2(z0, z1);
-			svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 3) * cs_c0], z400);
+				z400 = svcreate2(z0, z1);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 3) * cs_c0], z400);
 
-			z600 = svcreate2(z2, z3);
-			svst1_f32_x2(svptrue_c32(), &c_[result_tile_TR_corner + (tcol + 3) * cs_c0], z600);
+				z600 = svcreate2(z2, z3);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TR_corner + (tcol + 3) * cs_c0], z600);
+			}
 		}
-	}
 
-	else {
+		else {
 			for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
 				//Read ZA slices into Z regs
 				// svfloat32x4_t z00 = svread_ver_za32_f32_vg4(
@@ -479,6 +480,270 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 
 				svfloat32x2_t z6003 = svcreate2(z603, z703);
 				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TR_corner + (tcol + 3) * cs_c0], z6003);
+			}
+		}
+	}
+	else {
+        const uint64_t result_tile_BL_corner = SVL * rs_c0;
+		
+		if (beta_ == 0) {
+			for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
+				//Read ZA slices into Z regs
+				// svfloat32x4_t z00 = svread_hor_za32_f32_vg4(
+				// 	/* tile: */ 0, /* slice: */ tcol + 0);
+
+				svfloat32_t z0 = svread_hor_za32_m(
+					z0, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 0);
+				svfloat32_t z1 = svread_hor_za32_m(
+					z1, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 0);
+				svfloat32_t z2 = svread_hor_za32_m(
+					z2, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 0);
+				svfloat32_t z3 = svread_hor_za32_m(
+					z3, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 0);
+
+				//Scale Z regs by broadcast alpha
+				z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+				z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+				z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+				z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+				//Store full result into C
+				svfloat32x2_t z400 = svcreate2(z0, z2);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c0], z400);
+
+				svfloat32x2_t z600 = svcreate2(z1, z3);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (tcol + 0) * rs_c0], z600);
+				
+				//Repeat unfolded x4
+				z0 = svread_hor_za32_m(
+					z0, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 1);
+				z1 = svread_hor_za32_m(
+					z1, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 1);
+				z2 = svread_hor_za32_m(
+					z2, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 1);
+				z3 = svread_hor_za32_m(
+					z3, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 1);
+
+				//z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 1), zalpha);
+				z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+				z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+				z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+				z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+				
+				z400 = svcreate2(z0, z2);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 1) * rs_c0], z400);
+
+				z600 = svcreate2(z1, z3);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (tcol + 1) * rs_c0], z600);
+
+				z0 = svread_hor_za32_m(
+					z0, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 2);
+				z1 = svread_hor_za32_m(
+					z1, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 2);
+				z2 = svread_hor_za32_m(
+					z2, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 2);
+				z3 = svread_hor_za32_m(
+					z3, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 2);
+
+				//z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 2), zalpha);
+				z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+				z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+				z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+				z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+				z400 = svcreate2(z0, z2);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 2) * rs_c0], z400);
+
+				z600 = svcreate2(z1, z3);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (tcol + 2) * rs_c0], z600);
+
+				z0 = svread_hor_za32_m(
+					z0, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 3);
+				z1 = svread_hor_za32_m(
+					z1, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 3);
+				z2 = svread_hor_za32_m(
+					z2, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 3);
+				z3 = svread_hor_za32_m(
+					z3, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 3);
+
+				// z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 3), zalpha);
+				z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+				z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+				z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+				z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+				z400 = svcreate2(z0, z2);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 3) * rs_c0], z400);
+
+				z600 = svcreate2(z1, z3);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (tcol + 3) * rs_c0], z600);
+			}
+		}
+		else {
+			for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
+				//Read ZA slices into Z regs
+				// svfloat32x4_t z00 = svread_ver_za32_f32_vg4(
+				// 	/* tile: */ 0, /* slice: */ tcol + 0);
+				svfloat32_t z0 = svread_hor_za32_m(
+					z0, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 0);
+				svfloat32_t z1 = svread_hor_za32_m(
+					z1, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 0);
+				svfloat32_t z2 = svread_hor_za32_m(
+					z2, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 0);
+				svfloat32_t z3 = svread_hor_za32_m(
+					z3, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 0);
+
+				//Scale Z regs by broadcast alpha
+				svfloat32_t z00 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+				svfloat32_t z10 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+				svfloat32_t z20 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+				svfloat32_t z30 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+
+				//Load C into Z regs
+				svfloat32x2_t zq5 = svld1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (((tcol + 0) * rs_c0))]);
+				svfloat32x2_t zq6 = svld1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (((tcol + 0) * rs_c0))]);
+
+				//Scale Z regs by broadcast beta
+				svfloat32_t z40 = svmla_m(svptrue_b32(), z00, svget2(zq5, 0), zbeta);
+				svfloat32_t z50 = svmla_m(svptrue_b32(), z10, svget2(zq6, 0), zbeta);
+				svfloat32_t z60 = svmla_m(svptrue_b32(), z20, svget2(zq5, 1), zbeta);
+				svfloat32_t z70 = svmla_m(svptrue_b32(), z30, svget2(zq6, 1), zbeta);
+
+
+				//Store full result into C
+				svfloat32x2_t z400 = svcreate2(z40, z60);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c0], z400);
+
+				svfloat32x2_t z600 = svcreate2(z50, z70);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (tcol + 0) * rs_c0], z600);
+				
+				//Repeat unfolded x4
+				svfloat32_t z01 = svread_hor_za32_m(
+					z01, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 1);
+				svfloat32_t z11 = svread_hor_za32_m(
+					z11, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 1);
+				svfloat32_t z21 = svread_hor_za32_m(
+					z21, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 1);
+				svfloat32_t z31 = svread_hor_za32_m(
+					z31, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 1);
+
+				//z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 1), zalpha);
+				svfloat32_t z02 = svmul_f32_z(svptrue_b32(), z01, zalpha);
+				svfloat32_t z12 = svmul_f32_z(svptrue_b32(), z11, zalpha);
+				svfloat32_t z22 = svmul_f32_z(svptrue_b32(), z21, zalpha);
+				svfloat32_t z32 = svmul_f32_z(svptrue_b32(), z31, zalpha);
+
+
+
+				svfloat32x2_t zq51 = svld1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (((tcol + 1) * rs_c0))]);
+				svfloat32x2_t zq61 = svld1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (((tcol + 1) * rs_c0))]);
+		
+				svfloat32_t z401 = svmla_m(svptrue_b32(), z02, svget2(zq51, 0), zbeta);
+				svfloat32_t z501 = svmla_m(svptrue_b32(), z12, svget2(zq61, 0), zbeta);
+				svfloat32_t z601 = svmla_m(svptrue_b32(), z22, svget2(zq51, 1), zbeta);
+				svfloat32_t z701 = svmla_m(svptrue_b32(), z32, svget2(zq61, 1), zbeta);
+				
+
+				svfloat32x2_t z4001 = svcreate2(z401, z601);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 1) * rs_c0], z4001);
+
+				svfloat32x2_t z6001 = svcreate2(z501, z701);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (tcol + 1) * rs_c0], z6001);
+
+				svfloat32_t z03 = svread_hor_za32_m(
+					z03, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 2);
+				svfloat32_t z13 = svread_hor_za32_m(
+					z13, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 2);
+				svfloat32_t z23 = svread_hor_za32_m(
+					z23, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 2);
+				svfloat32_t z33 = svread_hor_za32_m(
+					z33, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 2);
+
+				//z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 2), zalpha);
+				svfloat32_t z04 = svmul_f32_z(svptrue_b32(), z03, zalpha);
+				svfloat32_t z14 = svmul_f32_z(svptrue_b32(), z13, zalpha);
+				svfloat32_t z24 = svmul_f32_z(svptrue_b32(), z23, zalpha);
+				svfloat32_t z34 = svmul_f32_z(svptrue_b32(), z33, zalpha);
+
+
+				svfloat32x2_t zq52 = svld1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (((tcol + 2) * rs_c0))]);
+				svfloat32x2_t zq62 = svld1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (((tcol + 2) * rs_c0))]);
+
+				svfloat32_t z402 = svmla_m(svptrue_b32(), z04, svget2(zq52, 0), zbeta);
+				svfloat32_t z502 = svmla_m(svptrue_b32(), z14, svget2(zq62, 0), zbeta);
+				svfloat32_t z602 = svmla_m(svptrue_b32(), z24, svget2(zq52, 1), zbeta);
+				svfloat32_t z702 = svmla_m(svptrue_b32(), z34, svget2(zq62, 1), zbeta);			
+				
+
+				svfloat32x2_t z4002 = svcreate2(z402, z602);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 2) * rs_c0], z4002);
+
+				svfloat32x2_t z6002 = svcreate2(z502, z702);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (tcol + 2) * rs_c0], z6002);
+
+				svfloat32_t z05 = svread_hor_za32_m(
+					z05, svptrue_b32(),
+					/* tile: */ 0, /* slice: */ tcol + 3);
+				svfloat32_t z15 = svread_hor_za32_m(
+					z15, svptrue_b32(),
+					/* tile: */ 1, /* slice: */ tcol + 3);
+				svfloat32_t z25 = svread_hor_za32_m(
+					z25, svptrue_b32(),
+					/* tile: */ 2, /* slice: */ tcol + 3);
+				svfloat32_t z35 = svread_hor_za32_m(
+					z35, svptrue_b32(),
+					/* tile: */ 3, /* slice: */ tcol + 3);
+
+				// z0 = svmul_f32_z(svptrue_b32(), svget4(z00, 3), zalpha);
+				svfloat32_t z06 = svmul_f32_z(svptrue_b32(), z05, zalpha);
+				svfloat32_t z16 = svmul_f32_z(svptrue_b32(), z15, zalpha);
+				svfloat32_t z26 = svmul_f32_z(svptrue_b32(), z25, zalpha);
+				svfloat32_t z36 = svmul_f32_z(svptrue_b32(), z35, zalpha);
+
+
+				svfloat32x2_t zq53 = svld1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (((tcol + 3) * rs_c0))]);
+				svfloat32x2_t zq63 = svld1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (((tcol + 3) * rs_c0))]);
+		
+				svfloat32_t z403 = svmla_m(svptrue_b32(), z06, svget2(zq53, 0), zbeta);
+				svfloat32_t z503 = svmla_m(svptrue_b32(), z16, svget2(zq63, 0), zbeta);
+				svfloat32_t z603 = svmla_m(svptrue_b32(), z26, svget2(zq53, 1), zbeta);
+				svfloat32_t z703 = svmla_m(svptrue_b32(), z36, svget2(zq63, 1), zbeta);
+				
+				svfloat32x2_t z4003 = svcreate2(z403, z603);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 3) * rs_c0], z4003);
+
+				svfloat32x2_t z6003 = svcreate2(z503, z703);
+				svst1_f32_x2(svptrue_c32(), &c_[result_tile_BL_corner + (tcol + 3) * rs_c0], z6003);
+			}
 		}
 	}
 	return;
@@ -1479,6 +1744,7 @@ void bli_dgemm_m4sme_asm_6x8
 
 	GEMM_UKR_FLUSH_CT( d );
 }
+
 
 
 
