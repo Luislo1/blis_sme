@@ -82,7 +82,9 @@ void		bli_spackm_m4sme_int_8x12
 	const float    *restrict alpha1 = a;
 	float	       *restrict pi1 = p;
 
-	if (cdim == mr && cdim_bcast == 1) {
+	const bool     gs     = ( inca != 1 && lda != 1 );
+
+	if (cdim == mr && cdim_bcast == 1 && !gs) {
 		if (bli_seq1(*((float *)kappa))) {
 			if (inca == 1)
 				//continous memory.packA style
