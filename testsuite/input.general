@@ -9,7 +9,7 @@
 #
 
 1       # Number of repeats per experiment (best result is reported)
-cr       # Matrix storage scheme(s) to test:
+rc      # Matrix storage scheme(s) to test:
         #   'c' = col-major storage; 'g' = general stride storage;
         #   'r' = row-major storage
 cj      # Vector storage scheme(s) to test:
@@ -27,9 +27,9 @@ s       # Datatype(s) to test:
         #   'd' = double real; 'z' = double complex
 0       # Test gemm with mixed-domain operands?
 0       # Test gemm with mixed-precision operands?
-64      # Problem size: first to test
-10240  # Problem size: maximum to test
-64      # Problem size: increment between experiments
+32      # Problem size: first to test
+4096    # Problem size: maximum to test
+32      # Problem size: increment between experiments
         # Complex level-3 implementations to test:
 1       #   1m   ('1' = enable; '0' = disable)
 1       #   native ('1' = enable; '0' = disable)
