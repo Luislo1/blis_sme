@@ -70,7 +70,6 @@ void bli_sgemm_m4sme_asm_8x12
 
 	float * c_ = (float*)c;
 
-
 #if 1
 	const uint64_t result_tile_TL_corner_ = 0;
         const uint64_t result_tile_TR_corner_ = result_tile_TL_corner_ + SVL;
@@ -130,11 +129,11 @@ void bli_sgemm_m4sme_asm_8x12
 		svfloat32x4_t zL00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[0]));
 		svfloat32x4_t zR00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[0]));
 
-        	__pldx(0,1,1,(float*)&a_next[0]);
-        	__pldx(0,1,1,(float*)&b_next[0]);
-
 		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00,0), svget4(zR00, 0));
 		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00,1), svget4(zR00, 0));
+
+        	__pldx(0,1,1,(float*)&a_next[0]);
+        	__pldx(0,1,1,(float*)&b_next[0]);
 
 		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00,0), svget4(zR00, 1));
 		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00,1), svget4(zR00, 1));
@@ -148,11 +147,11 @@ void bli_sgemm_m4sme_asm_8x12
 		svfloat32x4_t zL02 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(4*SVL)      ]));
 		svfloat32x4_t zR02 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(4*SVL)      ]));
 
-        	__pldx(0,1,1,(float*)&a_next[4*SVL]);
-        	__pldx(0,1,1,(float*)&b_next[4*SVL]);
-
 		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL02, 0), svget4(zR02, 0));
 		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL02, 1), svget4(zR02, 0));
+
+        	__pldx(0,1,1,(float*)&a_next[4*SVL]);
+        	__pldx(0,1,1,(float*)&b_next[4*SVL]);
 
 		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL02, 0), svget4(zR02, 1));
 		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL02, 1), svget4(zR02, 1));
@@ -168,11 +167,11 @@ void bli_sgemm_m4sme_asm_8x12
 		svfloat32x4_t zL04 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[8*SVL]));
 		svfloat32x4_t zR04 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[8*SVL]));
 
-        	__pldx(0,1,1,(float*)&a_next[8*SVL]);
-        	__pldx(0,1,1,(float*)&b_next[8*SVL]);
-
 		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL04,0), svget4(zR04, 0));
 		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL04,1), svget4(zR04, 0));
+
+        	__pldx(0,1,1,(float*)&a_next[8*SVL]);
+        	__pldx(0,1,1,(float*)&b_next[8*SVL]);
 
 		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL04,0), svget4(zR04, 1));
 		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL04,1), svget4(zR04, 1));
@@ -186,11 +185,11 @@ void bli_sgemm_m4sme_asm_8x12
 		svfloat32x4_t zL06 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(12*SVL)      ]));
 		svfloat32x4_t zR06 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(12*SVL)      ]));
 
-        	__pldx(0,1,1,(float*)&a_next[12*SVL]);
-        	__pldx(0,1,1,(float*)&b_next[12*SVL]);
-
 		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL06, 0), svget4(zR06, 0));
 		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL06, 1), svget4(zR06, 0));
+
+        	__pldx(0,1,1,(float*)&a_next[12*SVL]);
+        	__pldx(0,1,1,(float*)&b_next[12*SVL]);
 
 		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL06, 0), svget4(zR06, 1));
 		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL06, 1), svget4(zR06, 1));
