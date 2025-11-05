@@ -142,78 +142,101 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
        const void*      a,
        const void*      b,
        const void*      beta,
-             void*      c, inc_t rs_c0, inc_t cs_c0,
+             void*      c, inc_t rs_c, inc_t cs_c,
        const auxinfo_t* data,
        const cntx_t*    cntx
      ) 
 {
+	GEMM_UKR_SETUP_CT_AMBI( s, 16, 64, false );
 	float * a_ = (float*)a;
 	float * b_ = (float*)b;
-	float * c_ = (float*)c;
  	uint64_t SVL = svcntsw();
 //printf("SVL: %d. m=%lld. n=%lld. k=%lld\n", SVL, m, n, k);
 //printf("alpha: %f. beta=%f\n", *(float*)alpha, *(float*)beta);
-//printf("rs_c0: %d. cs_c0=%d\n", rs_c0, cs_c0);
+//printf("rs_c: %d. cs_c=%d\n", rs_c, cs_c);
 	//svbool_t pMDim = svwhilelt_b32(m, m);
 	//svbool_t pNDim = svwhilelt_b32(n, n);
 
 	const void* a_next = bli_auxinfo_next_a( data );
 	const void* b_next = bli_auxinfo_next_b( data );
-	//int vnum = cs_c0 / SVL;
+
+	float * c_ = (float*)c;
+	//int vnum = cs_c / SVL;
 
 	svzero_za();
 
-	for (uint64_t k_ = 0; k_ < k; k_+=4) {
-		// Aplica prefetch explícito para lectura
-        	//svprfb(svptrue_b32(), &a_[(k_+1) * (2*SVL)      ], 0);
-        	//svprfb(svptrue_b32(), &a_[(k_+2) * (2*SVL)      ], 0);
 
-        	//svprfb(svptrue_b32(), &b_[(k_+1) * (2*SVL)      ], 0);
-        	//svprfb(svptrue_b32(), &b_[(k_+2) * (2*SVL)      ], 0);
+	uint64_t k_;
+	uint64_t k_iter = k/4;
+	uint64_t k_left = k%4;
 
-		// Loads.
-                svfloat32x4_t zL00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(k_+0) * (SVL)      ]));
+	for (k_ = 0; k_ < k_iter; k_++) {
+// Aplica prefetch explícito para lectura
+	//svprfb(svptrue_b32(), &a_[(k_+1) * (2*SVL)      ], 0);
+	//svprfb(svptrue_b32(), &a_[(k_+2) * (2*SVL)      ], 0);
 
-				svfloat32x4_t zR00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(k_+0) * (4*SVL)      ]));
+	//svprfb(svptrue_b32(), &b_[(k_+1) * (2*SVL)      ], 0);
+	//svprfb(svptrue_b32(), &b_[(k_+2) * (2*SVL)      ], 0);
 
-        	// svprfb(svptrue_b32(), &a_[(k_+3) * (SVL)      ], 0);
-		// Prefetch (dudo si funciona).
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 0));
-		// Prefetch (dudo si funciona).
-        	// svprfb(svptrue_b32(), &b_[(k_+3) * (4*SVL)      ], 0);
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 1));
+// Loads.
+		svfloat32x4_t zL00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[0      ]));
 
-				svfloat32x4_t zR01 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(k_+1) * (4*SVL)      ]));
+		svfloat32x4_t zR00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[0     ]));
 
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 2));
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 3));
+	// svprfb(svptrue_b32(), &a_[(k_+3) * (SVL)      ], 0);
+// Prefetch (dudo si funciona).
+		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 0));
+// Prefetch (dudo si funciona).
+	// svprfb(svptrue_b32(), &b_[(k_+3) * (4*SVL)      ], 0);
+		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 1));
 
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 0));
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 1));
+		svfloat32x4_t zR01 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(4*SVL)      ]));
 
-                svfloat32x4_t zR02 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(k_+2) * (4*SVL)      ]));
+		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 2));
+		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 3));
 
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 2));
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 3));
+		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 0));
+		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 1));
 
+		svfloat32x4_t zR02 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[2 * (4*SVL)      ]));
 
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,0));
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,1));
-
-                svfloat32x4_t zR03 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(k_+3) * (4*SVL)      ]));
-
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,2));
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,3));
+		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 2));
+		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 3));
 
 
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,0));
-		// Prefetch (dudo si funciona).
-        	 svprfb(svptrue_b32(), (float*)&a_next, 0);
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,1));
-		// Prefetch (dudo si funciona).
-        	 svprfb(svptrue_b32(), (float*)&b_next, 0);
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,2));
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,3));
+		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,0));
+		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,1));
+
+		svfloat32x4_t zR03 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[3 * (4*SVL)      ]));
+
+		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,2));
+		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,3));
+
+
+		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,0));
+// Prefetch (dudo si funciona).
+		svprfb(svptrue_b32(), (float*)&a_next, 0);
+		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,1));
+// Prefetch (dudo si funciona).
+		svprfb(svptrue_b32(), (float*)&b_next, 0);
+		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,2));
+		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,3));
+		a_ += (4*SVL);
+		b_ += (4*4*SVL);
+	}
+
+	for (k_=0; k_ < k_left; k_+=1) {
+		svfloat32_t zL00 = svld1_f32(svptrue_b32(), (float32_t*)(&a_[0]));
+		svfloat32x4_t zR00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[0]));
+
+		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL00, svget4(zR00,0));
+		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL00, svget4(zR00,1));
+
+		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL00, svget4(zR00,2));
+		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL00, svget4(zR00,3));
+
+		a_ += (SVL);
+		b_ += (4*SVL);
 	}
 		// Store ZA to matResult.
 
@@ -221,12 +244,12 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 		float beta_ = *(float*) beta;
 		float alpha_ = *(float*) alpha;
         const uint64_t result_tile_TL_corner = 0;
-        const uint64_t result_tile_BL_corner = SVL * cs_c0;
-        const uint64_t result_tile_TR_corner = SVL * 2 * cs_c0;
-        const uint64_t result_tile_BR_corner = SVL * 3 * cs_c0;
+        const uint64_t result_tile_BL_corner = SVL * cs_c;
+        const uint64_t result_tile_TR_corner = SVL * 2 * cs_c;
+        const uint64_t result_tile_BR_corner = SVL * 3 * cs_c;
 		svfloat32_t zbeta = svdup_f32(beta_);
 		svfloat32_t zalpha = svdup_f32(alpha_);
-		if (rs_c0 == 1) {
+		if (rs_c == 1) {
 			for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
 				//Read ZA slices into Z regs
 				svfloat32_t z0 = svread_ver_za32_m(
@@ -249,10 +272,10 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 				z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
 					
 				//Load C into Z regs
-				svfloat32_t z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c0]);
-				svfloat32_t z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 0) * cs_c0]);
-				svfloat32_t z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 0) * cs_c0]);
-				svfloat32_t z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 0) * cs_c0]);
+				svfloat32_t z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c]);
+				svfloat32_t z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 0) * cs_c]);
+				svfloat32_t z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 0) * cs_c]);
+				svfloat32_t z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 0) * cs_c]);
 
 				//Scale Z regs by broadcast alpha
 				z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
@@ -262,10 +285,10 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 
 				//Store full result into C
 
-				svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c0], z4);
-				svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 0) * cs_c0], z5);
-				svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 0) * cs_c0], z6);
-				svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 0) * cs_c0], z7);
+				svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c], z4);
+				svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 0) * cs_c], z5);
+				svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 0) * cs_c], z6);
+				svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 0) * cs_c], z7);
 				
 				z0 = svread_ver_za32_m(
 					z0, svptrue_b32(),
@@ -289,20 +312,20 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 
 
 
-				z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 1) * cs_c0]);
-				z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 1) * cs_c0]);
-				z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 1) * cs_c0]);
-				z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 1) * cs_c0]);
+				z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 1) * cs_c]);
+				z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 1) * cs_c]);
+				z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 1) * cs_c]);
+				z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 1) * cs_c]);
 
 				z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
 				z5 = svmla_m(svptrue_b32(), z1, z5, zbeta);
 				z6 = svmla_m(svptrue_b32(), z2, z6, zbeta);
 				z7 = svmla_m(svptrue_b32(), z3, z7, zbeta);
 				
-				svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 1) * cs_c0], z4);
-				svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 1) * cs_c0], z5);
-				svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 1) * cs_c0], z6);
-				svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 1) * cs_c0], z7);
+				svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 1) * cs_c], z4);
+				svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 1) * cs_c], z5);
+				svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 1) * cs_c], z6);
+				svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 1) * cs_c], z7);
 
 
 				z0 = svread_ver_za32_m(
@@ -325,20 +348,20 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 				z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
 
 
-				z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 2) * cs_c0]);
-				z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 2) * cs_c0]);
-				z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 2) * cs_c0]);
-				z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 2) * cs_c0]);
+				z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 2) * cs_c]);
+				z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 2) * cs_c]);
+				z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 2) * cs_c]);
+				z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 2) * cs_c]);
 
 				z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
 				z5 = svmla_m(svptrue_b32(), z1, z5, zbeta);
 				z6 = svmla_m(svptrue_b32(), z2, z6, zbeta);
 				z7 = svmla_m(svptrue_b32(), z3, z7, zbeta);			
 				
-				svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 2) * cs_c0], z4);
-				svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 2) * cs_c0], z5);
-				svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 2) * cs_c0], z6);
-				svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 2) * cs_c0], z7);
+				svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 2) * cs_c], z4);
+				svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 2) * cs_c], z5);
+				svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 2) * cs_c], z6);
+				svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 2) * cs_c], z7);
 
 				z0 = svread_ver_za32_m(
 					z0, svptrue_b32(),
@@ -360,20 +383,20 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 				z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
 
 
-				z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 3) * cs_c0]);
-				z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 3) * cs_c0]);
-				z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 3) * cs_c0]);
-				z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 3) * cs_c0]);
+				z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 3) * cs_c]);
+				z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 3) * cs_c]);
+				z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 3) * cs_c]);
+				z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 3) * cs_c]);
 
 				z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
 				z5 = svmla_m(svptrue_b32(), z1, z5, zbeta);
 				z6 = svmla_m(svptrue_b32(), z2, z6, zbeta);
 				z7 = svmla_m(svptrue_b32(), z3, z7, zbeta);
 				
-				svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 3) * cs_c0], z4);
-				svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 3) * cs_c0], z5);
-				svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 3) * cs_c0], z6);
-				svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 3) * cs_c0], z7);
+				svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 3) * cs_c], z4);
+				svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 3) * cs_c], z5);
+				svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 3) * cs_c], z6);
+				svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 3) * cs_c], z7);
 		}
 	}
 	else {
@@ -399,7 +422,7 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
 				
 			//Load C into Z regs
-			svfloat32x4_t z4q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c0]);
+			svfloat32x4_t z4q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c]);
 
 			//Scale Z regs by broadcast alpha
 			svfloat32_t z4 = svmla_m(svptrue_b32(), z0, svget4(z4q,0), zbeta);
@@ -409,7 +432,7 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 
 			//Store full result into C
 			svfloat32x4_t z4w = svcreate4(z4, z5, z6, z7);
-			svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c0], z4w);
+			svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c], z4w);
 			
 			z0 = svread_hor_za32_m(
 				z0, svptrue_b32(),
@@ -431,7 +454,7 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
 			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
 
-			svfloat32x4_t z5q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 1) * rs_c0]);
+			svfloat32x4_t z5q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 1) * rs_c]);
 
 			z4 = svmla_m(svptrue_b32(), z0, svget4(z5q,0), zbeta);
 			z5 = svmla_m(svptrue_b32(), z1, svget4(z5q,1), zbeta);
@@ -439,7 +462,7 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 			z7 = svmla_m(svptrue_b32(), z3, svget4(z5q,3), zbeta);
 			
 			svfloat32x4_t z5w = svcreate4(z4, z5, z6, z7);
-			svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 1) * rs_c0], z5w);
+			svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 1) * rs_c], z5w);
 
 			z0 = svread_hor_za32_m(
 				z0, svptrue_b32(),
@@ -461,7 +484,7 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
 			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
 
-			svfloat32x4_t z6q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 2) * rs_c0]);
+			svfloat32x4_t z6q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 2) * rs_c]);
 
 			z4 = svmla_m(svptrue_b32(), z0, svget4(z6q,0), zbeta);
 			z5 = svmla_m(svptrue_b32(), z1, svget4(z6q,1), zbeta);
@@ -469,7 +492,7 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 			z7 = svmla_m(svptrue_b32(), z3, svget4(z6q,3), zbeta);         
 			
 			svfloat32x4_t z6w = svcreate4(z4, z5, z6, z7);
-			svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 2) * rs_c0], z6w);
+			svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 2) * rs_c], z6w);
 
 			z0 = svread_hor_za32_m(
 				z0, svptrue_b32(),
@@ -491,7 +514,7 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
 			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
 
-			svfloat32x4_t z7q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 3) * rs_c0]);
+			svfloat32x4_t z7q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 3) * rs_c]);
 
 			z4 = svmla_m(svptrue_b32(), z0, svget4(z7q,0), zbeta);
 			z5 = svmla_m(svptrue_b32(), z1, svget4(z7q,1), zbeta);
@@ -499,9 +522,11 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 			z7 = svmla_m(svptrue_b32(), z3, svget4(z7q,3), zbeta);
 
 			svfloat32x4_t z7w = svcreate4(z4, z5, z6, z7);
-			svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 3) * rs_c0], z7w);
+			svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 3) * rs_c], z7w);
 		}
 	}
+
+	GEMM_UKR_FLUSH_CT( s );
 
 	return;
 
@@ -1500,6 +1525,7 @@ void bli_dgemm_m4sme_asm_6x8
 
 	GEMM_UKR_FLUSH_CT( d );
 }
+
 
 
 
