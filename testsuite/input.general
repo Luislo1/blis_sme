@@ -9,13 +9,13 @@
 #
 
 1       # Number of repeats per experiment (best result is reported)
-grc      # Matrix storage scheme(s) to test:
+cr      # Matrix storage scheme(s) to test:
         #   'c' = col-major storage; 'g' = general stride storage;
         #   'r' = row-major storage
 cj      # Vector storage scheme(s) to test:
         #   'c' = colvec / unit stride; 'j' = colvec / non-unit stride;
         #   'r' = rowvec / unit stride; 'i' = rowvec / non-unit stride
-1       # Test all combinations of storage schemes?
+0       # Test all combinations of storage schemes?
 1       # Perform all tests with alignment?
         #   '0' = do NOT align buffers/ldims; '1' = align buffers/ldims
 0       # Randomize vectors and matrices using:
@@ -27,9 +27,9 @@ s       # Datatype(s) to test:
         #   'd' = double real; 'z' = double complex
 0       # Test gemm with mixed-domain operands?
 0       # Test gemm with mixed-precision operands?
-1024    # Problem size: first to test
-1024    # Problem size: maximum to test
-1024    # Problem size: increment between experiments
+64      # Problem size: first to test
+10240  # Problem size: maximum to test
+64      # Problem size: increment between experiments
         # Complex level-3 implementations to test:
 1       #   1m   ('1' = enable; '0' = disable)
 1       #   native ('1' = enable; '0' = disable)

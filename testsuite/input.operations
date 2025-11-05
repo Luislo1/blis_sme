@@ -286,7 +286,7 @@
 
 1        # gemm
 -1 -1 -1 #   dimensions: m n k
-??       #   parameters: transa transb
+nn       #   parameters: transa transb
 
 0        # gemmt
 -1 -1    #   dimensions: m k
