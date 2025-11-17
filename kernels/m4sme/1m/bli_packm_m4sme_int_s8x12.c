@@ -66,8 +66,8 @@ void		bli_spackm_m4sme_int_8x12
 		 const void *params,
 		 const cntx_t * cntx
 ){
-	const		int64_t cdim = cdim_;
-	const		int64_t mr = 64;
+	// const		int64_t cdim = cdim_;
+	// const		int64_t mr = 64;
 	const		int64_t n = n_;
 	const		int64_t inca = inca_;
 	const		int64_t lda = lda_;
@@ -77,8 +77,8 @@ void		bli_spackm_m4sme_int_8x12
 	float	       *restrict p_ = (float *)p;
 
 	uint64_t	SVL = svcntsw();
-	// svfloat32x4_t	tmp;
-	svfloat32_t	tmp;
+	svfloat32x4_t	tmp;
+	svfloat32_t		tmp2;
 
 	const float    *restrict alpha1 = a;
 	float	       *restrict pi1 = p;
@@ -87,22 +87,129 @@ void		bli_spackm_m4sme_int_8x12
 	
 	if (true) {
 		if (bli_seq1(*((float *)kappa))) {
-			if (inca == 1)
+			if (inca == 1 && ldp == 4 * SVL)
 				//continous memory.packA style
 			{
 				// printf("Pack A\n");
 				for (dim_t k = n; k != 0; --k) {
-					tmp = svld1_f32(svptrue_b32(), alpha1);
-					svst1_f32(svptrue_b32(), pi1, tmp);
-					// tmp = svld1_f32_x4(svptrue_c32(), alpha1);
-					// svst1_f32_x4(svptrue_c32(), pi1, tmp);
+					tmp = svld1_f32_x4(svptrue_c32(), alpha1);
+					svst1_f32_x4(svptrue_c32(), pi1, tmp);
 
+					alpha1 += lda;
+					pi1 += ldp;
+				}
+			
+			} 
+			if (inca == 1 && ldp == SVL)
+				//continous memory.packA style
+			{
+				// printf("Pack A\n");
+				for (dim_t k = n; k != 0; --k) {
+					tmp2 = svld1_f32(svptrue_b32(), alpha1);
+					svst1_f32(svptrue_b32(), pi1, tmp2);
 
 					alpha1 += lda;
 					pi1 += ldp;
 				}
 
-			} else {
+			}
+			else if (inca != 1 && ldp == SVL) {
+				// printf("Cdim: %d Ldp: %d Lda: %d Inca: %d n: %d\n", cdim, ldp, lda, inca, n);
+				// printf("Pack B\n");
+				{
+					for (uint64_t col = 0; col < n; col += 4 * SVL) {
+						for (uint64_t trow = 0; trow < SVL; trow += 4) {
+							svcount_t	p0 = svptrue_c32();
+
+							//const uint64_t tile_UL_corner = 0;
+							//Load 4 rows of A as double vectors(from the upper part).
+							//		zp0[0] - SVL | zp0[1] - SVL
+							//		zp1[0] - SVL | zp1[1] - SVL
+							//		zp2[0] - SVL | zp2[1] - SVL
+							//		zp3[0] - SVL | zp3[1] - SVL
+							//		Load 4 rows of A as double vectors(from the bottom part).
+							//		zp4[0] - SVL | zp4[1] - SVL
+							//		zp5[0] - SVL | zp1[1] - SVL
+							//		zp6[0] - SVL | zp6[1] - SVL
+							//		zp7[0] - SVL | zp7[1] - SVL
+
+							const		uint64_t tile_UL_corner = ( /* row + */ trow) * inca /* n */ + col;
+							svfloat32x4_t	zp0 = svld1_f32_x4(p0, &a_[tile_UL_corner + 0 * inca]);
+							//+col;
+							//+col;
+							// printf("%d %d\n", tile_UL_corner, tile_BL_corner);
+							svfloat32x4_t	zp4 = svld1_f32_x4(p0, &a_[tile_UL_corner + 1 * inca]);
+							svfloat32x4_t	zp8 = svld1_f32_x4(p0, &a_[tile_UL_corner + 2 * inca]);
+							//+col;
+							//+col;
+							// printf("%d %d\n", tile_UL_corner, tile_BL_corner);
+							svfloat32x4_t	zp12 = svld1_f32_x4(p0, &a_[tile_UL_corner + 3 * inca]);
+
+							//zq0 < -zp0[0] | zp1[0] | zp2[0] | zp3[0]
+								// zq1 < -zp0[1] | zp1[1] | zp2[1] | zp3[1]
+								//
+								//zq2 < -zp4[0] | zp5[0] | zp6[0] | zp7[0]
+								// zq3 < -zp4[1] | zp5[1] | zp6[1] | zp7[1]
+							svfloat32x4_t	zq0 = svcreate4(svget4(zp0, 0), svget4(zp4, 0),
+											 svget4(zp8, 0), svget4(zp12, 0));
+
+							svfloat32x4_t	zq1 = svcreate4(svget4(zp0, 1), svget4(zp4, 1),
+											 svget4(zp8, 1), svget4(zp12, 1));
+
+							svfloat32x4_t	zq2 = svcreate4(svget4(zp0, 2), svget4(zp4, 2),
+											 svget4(zp8, 2), svget4(zp12, 2));
+
+							svfloat32x4_t	zq3 = svcreate4(svget4(zp0, 3), svget4(zp4, 3),
+											 svget4(zp8, 3), svget4(zp12, 3));
+					//ZA contents:
+					//Tile 0:SVL rows(top) x SVL columns(left).Tile 1:SVL rows(top) x SVL columns(right)
+					// Tile 2:SVL rows(bot) x SVL columns(left).Tile 3:SVL rows(bot) x SVL columns(right)
+
+							svwrite_hor_za32_f32_vg4(
+											  /* tile: */ 0, /* slice: */ trow, zq0);
+							svwrite_hor_za32_f32_vg4(
+										  /* tile: */ 1, /* slice: */ trow, zq1);
+							svwrite_hor_za32_f32_vg4(
+										  /* tile: */ 2, /* slice: */ trow, zq2);
+							svwrite_hor_za32_f32_vg4(
+										  /* tile: */ 3, /* slice: */ trow, zq3);
+						}
+
+						//Read - as - columns and store
+							for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
+							svcount_t	p0 = svptrue_c32();
+
+							//Each svread_ver reads 4 columns of the tile(SVL).
+								svfloat32x4_t zq0 = svread_ver_za32_f32_vg4( /* tile: */ 0, /* slice: */ tcol);
+							svfloat32x4_t	zq2 = svread_ver_za32_f32_vg4( /* tile: */ 2, /* slice: */ tcol);
+
+							svfloat32x4_t	zq1 = svread_ver_za32_f32_vg4( /* tile: */ 1, /* slice: */ tcol);
+							svfloat32x4_t	zq3 = svread_ver_za32_f32_vg4( /* tile: */ 3, /* slice: */ tcol);
+
+							// svst1(p0, &p_[0], zq0_);
+							// svst1(p0, &p_[4 * SVL], zq1_);
+							// svst1(p0, &p_[8 * SVL], zq2_);
+							// svst1(p0, &p_[12 * SVL], zq3_);
+
+							// p_ += (16 * SVL);
+
+							svst1(p0, &p_[0], zq0);
+							svst1(p0, &p_[SVL * SVL], zq1);
+							svst1(p0, &p_[2 * SVL * SVL], zq2);
+							svst1(p0, &p_[3 * SVL * SVL], zq3);
+							
+							p_ += (4 * SVL);
+						}
+						p_ += (3 * SVL * SVL);
+
+						//p_ += (2 * SVL * SVL);
+					}
+				}
+
+				p_ = (float *)p;
+
+			}
+			else if (inca != 1 && ldp == 4 * SVL) {
 				// printf("Pack B\n");
 				{
 					for (uint64_t col = 0; col < n; col += SVL) {
@@ -129,7 +236,7 @@ void		bli_spackm_m4sme_int_8x12
 							svfloat32_t	zp1 = svld1_f32(p1, &a_[tile_UL_corner + 1 * inca]);
 							svfloat32_t	zp2 = svld1_f32(p2, &a_[tile_UL_corner + 2 * inca]);
 							svfloat32_t	zp3 = svld1_f32(p3, &a_[tile_UL_corner + 3 * inca]);
-							int cuartSVL = SVL / 4;
+							
 							const		uint64_t tile_BL_corner = tile_UL_corner + inca * SVL;
 							//+col;
 							//+col;
@@ -252,5 +359,6 @@ void		bli_spackm_m4sme_int_8x12
 		 p_, ldp
 		);
 }
+
 
 
