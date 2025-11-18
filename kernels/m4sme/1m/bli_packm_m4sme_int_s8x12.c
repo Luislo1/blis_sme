@@ -66,7 +66,7 @@ void		bli_spackm_m4sme_int_8x12
 		 const void *params,
 		 const cntx_t * cntx
 ){
-	// const		int64_t cdim = cdim_;
+	 const		int64_t cdim = cdim_;
 	// const		int64_t mr = 64;
 	const		int64_t n = n_;
 	const		int64_t inca = inca_;
@@ -85,7 +85,9 @@ void		bli_spackm_m4sme_int_8x12
 		// printf("%d %d %d %d %d %d\n", cdim, mr, cdim_bcast, ldp, lda, n);
 		// printf("Inca: %d\n", inca);
 	
-	if (true) {
+	const bool     gs     = ( inca != 1 && lda != 1 );
+
+	if (!gs && (cdim == 64 || cdim == 16) && cdim_bcast) {
 		if (bli_seq1(*((float *)kappa))) {
 			if (inca == 1 && ldp == 4 * SVL)
 				//continous memory.packA style
@@ -359,6 +361,7 @@ void		bli_spackm_m4sme_int_8x12
 		 p_, ldp
 		);
 }
+
 
 
 
