@@ -142,14 +142,14 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
        const void*      a,
        const void*      b,
        const void*      beta,
-             void*      c, inc_t rs_c0, inc_t cs_c0,
+             void*      c, inc_t rs_c, inc_t cs_c,
        const auxinfo_t* data,
        const cntx_t*    cntx
      ) 
 {
+	GEMM_UKR_SETUP_CT_AMBI( s, 64, 16, false );
 	float * a_ = (float*)a;
 	float * b_ = (float*)b;
-	float * c_ = (float*)c;
  	uint64_t SVL = svcntsw();
 //printf("SVL: %d. m=%lld. n=%lld. k=%lld\n", SVL, m, n, k);
 //printf("alpha: %f. beta=%f\n", *(float*)alpha, *(float*)beta);
@@ -161,229 +161,615 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 	const void* b_next = bli_auxinfo_next_b( data );
 	//int vnum = cs_c0 / SVL;
 
+	float * c_ = (float*)c;
 	svzero_za();
 
-	for (uint64_t k_ = 0; k_ < k; k_+=4) {
-		// Aplica prefetch explícito para lectura
-        	//svprfb(svptrue_b32(), &a_[(k_+1) * (2*SVL)      ], 0);
-        	//svprfb(svptrue_b32(), &a_[(k_+2) * (2*SVL)      ], 0);
+	uint64_t k_;
+	uint64_t k_iter = k/4;
+	uint64_t k_left = k%4;
 
-        	//svprfb(svptrue_b32(), &b_[(k_+1) * (2*SVL)      ], 0);
-        	//svprfb(svptrue_b32(), &b_[(k_+2) * (2*SVL)      ], 0);
+	for (k_ = 0; k_ < k_iter; k_++) {
+// Aplica prefetch explícito para lectura
+	//svprfb(svptrue_b32(), &a_[(k_+1) * (2*SVL)      ], 0);
+	//svprfb(svptrue_b32(), &a_[(k_+2) * (2*SVL)      ], 0);
 
-		// Loads.
-                svfloat32x4_t zL00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(k_+0) * (SVL)      ]));
+	//svprfb(svptrue_b32(), &b_[(k_+1) * (2*SVL)      ], 0);
+	//svprfb(svptrue_b32(), &b_[(k_+2) * (2*SVL)      ], 0);
 
-				svfloat32x4_t zR00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(k_+0) * (4*SVL)      ]));
+// Loads.
+		svfloat32x4_t zL00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[0      ]));
 
-        	// svprfb(svptrue_b32(), &a_[(k_+3) * (SVL)      ], 0);
-		// Prefetch (dudo si funciona).
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 0));
-		// Prefetch (dudo si funciona).
-        	// svprfb(svptrue_b32(), &b_[(k_+3) * (4*SVL)      ], 0);
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 1));
+		svfloat32x4_t zR00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[0     ]));
 
-				svfloat32x4_t zR01 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(k_+1) * (4*SVL)      ]));
+	// svprfb(svptrue_b32(), &a_[(k_+3) * (SVL)      ], 0);
+// Prefetch (dudo si funciona).
+		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 0));
+// Prefetch (dudo si funciona).
+	// svprfb(svptrue_b32(), &b_[(k_+3) * (4*SVL)      ], 0);
+		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 1));
 
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 2));
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 3));
+		svfloat32x4_t zR01 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(4*SVL)      ]));
 
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 0));
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 1));
+		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 2));
+		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 3));
 
-                svfloat32x4_t zR02 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(k_+2) * (4*SVL)      ]));
+		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 0));
+		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 1));
 
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 2));
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 3));
+		svfloat32x4_t zR02 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[2 * (4*SVL)      ]));
 
-
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,0));
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,1));
-
-                svfloat32x4_t zR03 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(k_+3) * (4*SVL)      ]));
-
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,2));
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,3));
+		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 2));
+		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 3));
 
 
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,0));
-		// Prefetch (dudo si funciona).
-        	 svprfb(svptrue_b32(), (float*)&a_next, 0);
-                svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,1));
-		// Prefetch (dudo si funciona).
-        	 svprfb(svptrue_b32(), (float*)&b_next, 0);
-                svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,2));
-                svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,3));
+		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,0));
+		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,1));
+
+		svfloat32x4_t zR03 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[3 * (4*SVL)      ]));
+
+		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,2));
+		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,3));
+
+
+		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,0));
+// Prefetch (dudo si funciona).
+		svprfb(svptrue_b32(), (float*)&a_next, 0);
+		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,1));
+// Prefetch (dudo si funciona).
+		svprfb(svptrue_b32(), (float*)&b_next, 0);
+		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,2));
+		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,3));
+		b_ += (4*SVL);
+		a_ += (4*4*SVL);
 	}
+
+	for (k_=0; k_ < k_left; k_+=1) {
+		svfloat32_t zL00 = svld1_f32(svptrue_b32(), (float32_t*)(&b_[0]));
+		svfloat32x4_t zR00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[0]));
+
+		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL00, svget4(zR00,0));
+		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), zL00, svget4(zR00,1));
+
+		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), zL00, svget4(zR00,2));
+		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), zL00, svget4(zR00,3));
+
+		b_ += (SVL);
+		a_ += (4*SVL);
+	}
+
+
+	// for (uint64_t k_ = 0; k_ < k; k_+=4) {
+	// 	// Aplica prefetch explícito para lectura
+    //     	//svprfb(svptrue_b32(), &a_[(k_+1) * (2*SVL)      ], 0);
+    //     	//svprfb(svptrue_b32(), &a_[(k_+2) * (2*SVL)      ], 0);
+
+    //     	//svprfb(svptrue_b32(), &b_[(k_+1) * (2*SVL)      ], 0);
+    //     	//svprfb(svptrue_b32(), &b_[(k_+2) * (2*SVL)      ], 0);
+
+	// 	// Loads.
+    //             svfloat32x4_t zL00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(k_+0) * (SVL)      ]));
+
+	// 			svfloat32x4_t zR00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(k_+0) * (4*SVL)      ]));
+
+    //     	// svprfb(svptrue_b32(), &a_[(k_+3) * (SVL)      ], 0);
+	// 	// Prefetch (dudo si funciona).
+    //             svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 0));
+	// 	// Prefetch (dudo si funciona).
+    //     	// svprfb(svptrue_b32(), &b_[(k_+3) * (4*SVL)      ], 0);
+    //             svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 1));
+
+	// 			svfloat32x4_t zR01 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(k_+1) * (4*SVL)      ]));
+
+    //             svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 2));
+    //             svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 3));
+
+    //             svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 0));
+    //             svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 1));
+
+    //             svfloat32x4_t zR02 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(k_+2) * (4*SVL)      ]));
+
+    //             svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 2));
+    //             svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 1), svget4(zR01, 3));
+
+
+    //             svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,0));
+    //             svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,1));
+
+    //             svfloat32x4_t zR03 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[(k_+3) * (4*SVL)      ]));
+
+    //             svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,2));
+    //             svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 2), svget4(zR02,3));
+
+
+    //             svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,0));
+	// 	// Prefetch (dudo si funciona).
+    //     	 svprfb(svptrue_b32(), (float*)&a_next, 0);
+    //             svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,1));
+	// 	// Prefetch (dudo si funciona).
+    //     	 svprfb(svptrue_b32(), (float*)&b_next, 0);
+    //             svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,2));
+    //             svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,3));
+	// }
 		// Store ZA to matResult.
 
 
 		float beta_ = *(float*) beta;
 		float alpha_ = *(float*) alpha;
         const uint64_t result_tile_TL_corner = 0;
-        const uint64_t result_tile_BL_corner = SVL * rs_c0;
-        const uint64_t result_tile_TR_corner = SVL * 2 * rs_c0;
-        const uint64_t result_tile_BR_corner = SVL * 3 * rs_c0;
+        const uint64_t result_tile_BL_corner = SVL * rs_c;
+        const uint64_t result_tile_TR_corner = SVL * 2 * rs_c;
+        const uint64_t result_tile_BR_corner = SVL * 3 * rs_c;
 		svfloat32_t zbeta = svdup_f32(beta_);
 		svfloat32_t zalpha = svdup_f32(alpha_);
-		// svscale_za32_m(svptrue_b32, svptrue_b32, zalpha);
-		for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
-			//TODO explorar usar más registros en vez de reusar
-			//Read ZA slices into Z regs
-			svfloat32_t z0 = svread_ver_za32_m(
-				z0, svptrue_b32(),
-				/* tile: */ 0, /* slice: */ tcol + 0);
-			svfloat32_t z1 = svread_ver_za32_m(
-				z1, svptrue_b32(),
-				/* tile: */ 1, /* slice: */ tcol + 0);
-			svfloat32_t z2 = svread_ver_za32_m(
-				z2, svptrue_b32(),
-				/* tile: */ 2, /* slice: */ tcol + 0);
-			svfloat32_t z3 = svread_ver_za32_m(
-				z3, svptrue_b32(),
-				/* tile: */ 3, /* slice: */ tcol + 0);
 
-			//Scale Z regs by broadcast beta
-			z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
-			z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
-			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
-			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
-				//no nos sirve
-			//svfloat32x2_t zq5 = svld1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (((tcol + 0) * rs_c0))]);
+		if (cs_c == 1) {
+			if (beta_ == 0) {
+				for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
+					//Read ZA slices into Z regs
+					svfloat32_t z0 = svread_ver_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 0);
+					svfloat32_t z1 = svread_ver_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 0);
+					svfloat32_t z2 = svread_ver_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 0);
+					svfloat32_t z3 = svread_ver_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 0);
+
+					//Scale Z regs by broadcast alpha
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+					//Store full result into C
+					svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c], z0);
+					svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 0) * rs_c], z1);
+					svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 0) * rs_c], z2);
+					svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 0) * rs_c], z3);
 				
-			//Load C into Z regs
-			svfloat32_t z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c0]);
-			svfloat32_t z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 0) * rs_c0]);
-			svfloat32_t z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 0) * rs_c0]);
-			svfloat32_t z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 0) * rs_c0]);
+					
+					z0 = svread_ver_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 1);
+					z1 = svread_ver_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 1);
+					z2 = svread_ver_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 1);
+					z3 = svread_ver_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 1);
 
-			//Scale Z regs by broadcast alpha
-			z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
-			z5 = svmla_m(svptrue_b32(), z1, z5, zbeta);
-			z6 = svmla_m(svptrue_b32(), z2, z6, zbeta);
-			z7 = svmla_m(svptrue_b32(), z3, z7, zbeta);
-
-
-			//TODO explorar hacer estas instrucciones con vector groups x4 o x2 (svuint32x4_t en fp)
-			//Store full result into C
-			
-				//no nos sirve tampoco
-			// svfloat32x2_t z400 = svcreate2(z4, z5);
-			// svst1_f32_x2(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c0], z400);
-
-			svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c0], z4);
-			svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 0) * rs_c0], z5);
-			svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 0) * rs_c0], z6);
-			svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 0) * rs_c0], z7);
-			
-			z0 = svread_ver_za32_m(
-				z0, svptrue_b32(),
-				/* tile: */ 0, /* slice: */ tcol + 1);
-			z1 = svread_ver_za32_m(
-				z1, svptrue_b32(),
-				/* tile: */ 1, /* slice: */ tcol + 1);
-			z2 = svread_ver_za32_m(
-				z2, svptrue_b32(),
-				/* tile: */ 2, /* slice: */ tcol + 1);
-			z3 = svread_ver_za32_m(
-				z3, svptrue_b32(),
-				/* tile: */ 3, /* slice: */ tcol + 1);
-
-			//Scale Z regs by broadcast beta
-			z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
-			z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
-			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
-			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+					
+					svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 1) * rs_c], z0);
+					svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 1) * rs_c], z1);
+					svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 1) * rs_c], z2);
+					svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 1) * rs_c], z3);
 
 
+					z0 = svread_ver_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 2);
+					z1 = svread_ver_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 2);
+					z2 = svread_ver_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 2);
+					z3 = svread_ver_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 2);
+
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);			
+					
+					svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 2) * rs_c], z0);
+					svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 2) * rs_c], z1);
+					svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 2) * rs_c], z2);
+					svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 2) * rs_c], z3);
 
 
-			z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 1) * rs_c0]);
-			z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 1) * rs_c0]);
-			z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 1) * rs_c0]);
-			z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 1) * rs_c0]);
+					z0 = svread_ver_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 3);
+					z1 = svread_ver_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 3);
+					z2 = svread_ver_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 3);
+					z3 = svread_ver_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 3);
 
-			z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
-			z5 = svmla_m(svptrue_b32(), z1, z5, zbeta);
-			z6 = svmla_m(svptrue_b32(), z2, z6, zbeta);
-			z7 = svmla_m(svptrue_b32(), z3, z7, zbeta);
-			
-			svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 1) * rs_c0], z4);
-			svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 1) * rs_c0], z5);
-			svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 1) * rs_c0], z6);
-			svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 1) * rs_c0], z7);
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+					
+					svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 3) * rs_c], z0);
+					svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 3) * rs_c], z1);
+					svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 3) * rs_c], z2);
+					svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 3) * rs_c], z3);
+				}
+			}
+			else {
+				for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
+					//Read ZA slices into Z regs
+					svfloat32_t z0 = svread_ver_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 0);
+					svfloat32_t z1 = svread_ver_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 0);
+					svfloat32_t z2 = svread_ver_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 0);
+					svfloat32_t z3 = svread_ver_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 0);
+
+					//Scale Z regs by broadcast alpha
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+						
+					//Load C into Z regs
+					svfloat32_t z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c]);
+					svfloat32_t z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 0) * rs_c]);
+					svfloat32_t z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 0) * rs_c]);
+					svfloat32_t z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 0) * rs_c]);
+
+					//Scale Z regs by broadcast beta
+					z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
+					z5 = svmla_m(svptrue_b32(), z1, z5, zbeta);
+					z6 = svmla_m(svptrue_b32(), z2, z6, zbeta);
+					z7 = svmla_m(svptrue_b32(), z3, z7, zbeta);
+
+					//Store full result into C
+					svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 0) * rs_c], z4);
+					svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 0) * rs_c], z5);
+					svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 0) * rs_c], z6);
+					svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 0) * rs_c], z7);
+				
+					
+					z0 = svread_ver_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 1);
+					z1 = svread_ver_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 1);
+					z2 = svread_ver_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 1);
+					z3 = svread_ver_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 1);
+
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+					z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 1) * rs_c]);
+					z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 1) * rs_c]);
+					z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 1) * rs_c]);
+					z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 1) * rs_c]);
+
+					z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
+					z5 = svmla_m(svptrue_b32(), z1, z5, zbeta);
+					z6 = svmla_m(svptrue_b32(), z2, z6, zbeta);
+					z7 = svmla_m(svptrue_b32(), z3, z7, zbeta);
+					
+					svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 1) * rs_c], z4);
+					svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 1) * rs_c], z5);
+					svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 1) * rs_c], z6);
+					svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 1) * rs_c], z7);
 
 
-			z0 = svread_ver_za32_m(
-				z0, svptrue_b32(),
-				/* tile: */ 0, /* slice: */ tcol + 2);
-			z1 = svread_ver_za32_m(
-				z1, svptrue_b32(),
-				/* tile: */ 1, /* slice: */ tcol + 2);
-			z2 = svread_ver_za32_m(
-				z2, svptrue_b32(),
-				/* tile: */ 2, /* slice: */ tcol + 2);
-			z3 = svread_ver_za32_m(
-				z3, svptrue_b32(),
-				/* tile: */ 3, /* slice: */ tcol + 2);
+					z0 = svread_ver_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 2);
+					z1 = svread_ver_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 2);
+					z2 = svread_ver_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 2);
+					z3 = svread_ver_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 2);
 
-			//Scale Z regs by broadcast beta
-			z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
-			z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
-			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
-			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
 
+					z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 2) * rs_c]);
+					z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 2) * rs_c]);
+					z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 2) * rs_c]);
+					z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 2) * rs_c]);
 
-			z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 2) * rs_c0]);
-			z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 2) * rs_c0]);
-			z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 2) * rs_c0]);
-			z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 2) * rs_c0]);
-
-			z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
-			z5 = svmla_m(svptrue_b32(), z1, z5, zbeta);
-			z6 = svmla_m(svptrue_b32(), z2, z6, zbeta);
-			z7 = svmla_m(svptrue_b32(), z3, z7, zbeta);			
-			
-			svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 2) * rs_c0], z4);
-			svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 2) * rs_c0], z5);
-			svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 2) * rs_c0], z6);
-			svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 2) * rs_c0], z7);
-
-			z0 = svread_ver_za32_m(
-				z0, svptrue_b32(),
-				/* tile: */ 0, /* slice: */ tcol + 3);
-			z1 = svread_ver_za32_m(
-				z1, svptrue_b32(),
-				/* tile: */ 1, /* slice: */ tcol + 3);
-			z2 = svread_ver_za32_m(
-				z2, svptrue_b32(),
-				/* tile: */ 2, /* slice: */ tcol + 3);
-			z3 = svread_ver_za32_m(
-				z3, svptrue_b32(),
-				/* tile: */ 3, /* slice: */ tcol + 3);
-
-			//Scale Z regs by broadcast beta
-			z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
-			z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
-			z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
-			z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+					z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
+					z5 = svmla_m(svptrue_b32(), z1, z5, zbeta);
+					z6 = svmla_m(svptrue_b32(), z2, z6, zbeta);
+					z7 = svmla_m(svptrue_b32(), z3, z7, zbeta);			
+					
+					svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 2) * rs_c], z4);
+					svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 2) * rs_c], z5);
+					svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 2) * rs_c], z6);
+					svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 2) * rs_c], z7);
 
 
-			z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 3) * rs_c0]);
-			z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 3) * rs_c0]);
-			z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 3) * rs_c0]);
-			z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 3) * rs_c0]);
+					z0 = svread_ver_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 3);
+					z1 = svread_ver_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 3);
+					z2 = svread_ver_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 3);
+					z3 = svread_ver_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 3);
 
-			z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
-			z5 = svmla_m(svptrue_b32(), z1, z5, zbeta);
-			z6 = svmla_m(svptrue_b32(), z2, z6, zbeta);
-			z7 = svmla_m(svptrue_b32(), z3, z7, zbeta);
-			
-			svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 3) * rs_c0], z4);
-			svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 3) * rs_c0], z5);
-			svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 3) * rs_c0], z6);
-			svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 3) * rs_c0], z7);
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+
+					z4 = svld1_f32(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 3) * rs_c]);
+					z5 = svld1_f32(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 3) * rs_c]);
+					z6 = svld1_f32(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 3) * rs_c]);
+					z7 = svld1_f32(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 3) * rs_c]);
+
+					z4 = svmla_m(svptrue_b32(), z0, z4, zbeta);
+					z5 = svmla_m(svptrue_b32(), z1, z5, zbeta);
+					z6 = svmla_m(svptrue_b32(), z2, z6, zbeta);
+					z7 = svmla_m(svptrue_b32(), z3, z7, zbeta);
+					
+					svst1(svptrue_b32(), &c_[result_tile_TL_corner + (tcol + 3) * rs_c], z4);
+					svst1(svptrue_b32(), &c_[result_tile_BL_corner + (tcol + 3) * rs_c], z5);
+					svst1(svptrue_b32(), &c_[result_tile_TR_corner + (tcol + 3) * rs_c], z6);
+					svst1(svptrue_b32(), &c_[result_tile_BR_corner + (tcol + 3) * rs_c], z7);
+				}
+			}
 	}
+	else {
+			if (beta_ == 0) {		
+				for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
+					//Read ZA slices into Z regs
+					svfloat32_t z0 = svread_hor_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 0);
+					svfloat32_t z1 = svread_hor_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 0);
+					svfloat32_t z2 = svread_hor_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 0);
+					svfloat32_t z3 = svread_hor_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 0);
+
+					//Scale Z regs by broadcast alpha
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+					//Store full result into C
+					svfloat32x4_t z4w = svcreate4(z0, z1, z2, z3);
+					svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c], z4w);
+					
+					z0 = svread_hor_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 1);
+					z1 = svread_hor_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 1);
+					z2 = svread_hor_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 1);
+					z3 = svread_hor_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 1);
+
+
+					svfloat32_t z4 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					svfloat32_t z5 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					svfloat32_t z6 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					svfloat32_t z7 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+					svfloat32x4_t z5w = svcreate4(z4, z5, z6, z7);
+					svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 1) * cs_c], z5w);
+
+
+					z0 = svread_hor_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 2);
+					z1 = svread_hor_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 2);
+					z2 = svread_hor_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 2);
+					z3 = svread_hor_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 2);
+
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+					z4w = svcreate4(z0, z1, z2, z3);
+					svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 2) * cs_c], z4w);
+
+					z0 = svread_hor_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 3);
+					z1 = svread_hor_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 3);
+					z2 = svread_hor_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 3);
+					z3 = svread_hor_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 3);
+
+					z4 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z5 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z6 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z7 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+					z5w = svcreate4(z4, z5, z6, z7);
+					svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 3) * cs_c], z5w);
+				}
+			}
+			else {
+				for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
+					//Read ZA slices into Z regs
+					svfloat32_t z0 = svread_hor_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 0);
+					svfloat32_t z1 = svread_hor_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 0);
+					svfloat32_t z2 = svread_hor_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 0);
+					svfloat32_t z3 = svread_hor_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 0);
+
+					//Scale Z regs by broadcast alpha
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+						
+					//Load C into Z regs
+					svfloat32x4_t z4q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c]);
+
+					//Scale Z regs by broadcast beta
+					svfloat32_t z4 = svmla_m(svptrue_b32(), z0, svget4(z4q,0), zbeta);
+					svfloat32_t z5 = svmla_m(svptrue_b32(), z1, svget4(z4q,1), zbeta);
+					svfloat32_t z6 = svmla_m(svptrue_b32(), z2, svget4(z4q,2), zbeta);
+					svfloat32_t z7 = svmla_m(svptrue_b32(), z3, svget4(z4q,3), zbeta);
+
+					//Store full result into C
+					svfloat32x4_t z4w = svcreate4(z4, z5, z6, z7);
+					svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 0) * cs_c], z4w);
+					
+
+					z0 = svread_hor_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 1);
+					z1 = svread_hor_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 1);
+					z2 = svread_hor_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 1);
+					z3 = svread_hor_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 1);
+
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+					svfloat32x4_t z5q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 1) * cs_c]);
+
+					svfloat32_t z8 = svmla_m(svptrue_b32(), z0, svget4(z5q,0), zbeta);
+					svfloat32_t z9 = svmla_m(svptrue_b32(), z1, svget4(z5q,1), zbeta);
+					svfloat32_t z10 = svmla_m(svptrue_b32(), z2, svget4(z5q,2), zbeta);
+					svfloat32_t z11 = svmla_m(svptrue_b32(), z3, svget4(z5q,3), zbeta);
+
+					svfloat32x4_t z5w = svcreate4(z8, z9, z10, z11);
+					svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 1) * cs_c], z5w);
+
+
+					z0 = svread_hor_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 2);
+					z1 = svread_hor_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 2);
+					z2 = svread_hor_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 2);
+					z3 = svread_hor_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 2);
+
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+					z4q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 2) * cs_c]);
+
+					z4 = svmla_m(svptrue_b32(), z0, svget4(z4q,0), zbeta);
+					z5 = svmla_m(svptrue_b32(), z1, svget4(z4q,1), zbeta);
+					z6 = svmla_m(svptrue_b32(), z2, svget4(z4q,2), zbeta);
+					z7 = svmla_m(svptrue_b32(), z3, svget4(z4q,3), zbeta);
+
+					z4w = svcreate4(z4, z5, z6, z7);
+					svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 2) * cs_c], z4w);
+
+
+					z0 = svread_hor_za32_m(
+						z0, svptrue_b32(),
+						/* tile: */ 0, /* slice: */ tcol + 3);
+					z1 = svread_hor_za32_m(
+						z1, svptrue_b32(),
+						/* tile: */ 1, /* slice: */ tcol + 3);
+					z2 = svread_hor_za32_m(
+						z2, svptrue_b32(),
+						/* tile: */ 2, /* slice: */ tcol + 3);
+					z3 = svread_hor_za32_m(
+						z3, svptrue_b32(),
+						/* tile: */ 3, /* slice: */ tcol + 3);
+
+					z0 = svmul_f32_z(svptrue_b32(), z0, zalpha);
+					z1 = svmul_f32_z(svptrue_b32(), z1, zalpha);
+					z2 = svmul_f32_z(svptrue_b32(), z2, zalpha);
+					z3 = svmul_f32_z(svptrue_b32(), z3, zalpha);
+
+					z5q = svld1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 3) * cs_c]);
+
+					z8 = svmla_m(svptrue_b32(), z0, svget4(z5q,0), zbeta);
+					z9 = svmla_m(svptrue_b32(), z1, svget4(z5q,1), zbeta);
+					z10 = svmla_m(svptrue_b32(), z2, svget4(z5q,2), zbeta);
+					z11 = svmla_m(svptrue_b32(), z3, svget4(z5q,3), zbeta);
+
+					z5w = svcreate4(z8, z9, z10, z11);
+					svst1_f32_x4(svptrue_c32(), &c_[result_tile_TL_corner + (tcol + 3) * cs_c], z5w);
+				}
+			}
+	}
+
+
+	GEMM_UKR_FLUSH_CT( s );
+
 	return;
 
      //bli_sgemm_m4sme_asm_8x12_impl(m,n,k,alpha, a, b, beta, c, rs_c0, rs_c0, data, cntx);
@@ -1381,6 +1767,7 @@ void bli_dgemm_m4sme_asm_6x8
 
 	GEMM_UKR_FLUSH_CT( d );
 }
+
 
 
 
