@@ -46,7 +46,7 @@ THIS_CONFIG    := m4sme
 # general-purpose/configuration-agnostic flags in common.mk. You
 # may specify additional flags here as needed.
 CPPROCFLAGS    := -D_GNU_SOURCE
-CMISCFLAGS     := -O3 -std=c99 -march=native+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access
+CMISCFLAGS     := -O3 -std=c99 -march=native+sme2+sme-f64f64 -fno-exceptions -fno-rtti -mno-unaligned-access
 CPICFLAGS      := -fPIC
 CWARNFLAGS     :=
 
@@ -59,7 +59,7 @@ COPTFLAGS      := -O3
 else
 # COPTFLAGS      := -O3 -mcpu=cortex-a57
 #COPTFLAGS      := -O3 -march=armv9.2-a+sme2p1+sme-f64f64+sme-i16i64+sme-f16f16
-COPTFLAGS      :=  -O3 -std=c99 -march=native+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access
+COPTFLAGS      :=  -O3 -std=c99 -march=native+sme2+sme-f64f64 -fno-exceptions -fno-rtti -mno-unaligned-access
 
 endif
 
@@ -68,11 +68,11 @@ endif
 # CKOPTFLAGS     := $(COPTFLAGS) -O3 -ftree-vectorize
 ifeq ($(CC_VENDOR),gcc)
 # CKVECFLAGS     := -mcpu=cortex-a57
-CKVECFLAGS     :=  -march=native+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access -fno-builtin
+CKVECFLAGS     :=  -march=native+sme2+sme-f64f64 -fno-exceptions -fno-rtti -mno-unaligned-access -fno-builtin
 else
 ifeq ($(CC_VENDOR),clang)
 # CKVECFLAGS     := -mcpu=cortex-a57
-CKVECFLAGS     :=  -O3 -march=native-a+sme2 -fno-exceptions -fno-rtti -mno-unaligned-access -fno-builtin 
+CKVECFLAGS     :=  -O3 -march=native-a+sme2+sme-f64f64 -fno-exceptions -fno-rtti -mno-unaligned-access -fno-builtin 
 else
 $(error gcc or clang is required for this configuration.)
 endif
@@ -93,4 +93,5 @@ endif
 # Store all of the variables here to new variables containing the
 # configuration name.
 $(eval $(call store-make-defs,$(THIS_CONFIG)))
+
 
