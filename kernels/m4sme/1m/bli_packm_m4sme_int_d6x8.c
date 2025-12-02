@@ -90,8 +90,7 @@ void		bli_dpackm_m4sme_int_6x8
 			if (inca == 1 && ldp == 4 * SVL)
 				//continous memory.packA style
 			{
-				// printf("Pack A\n");
-				printf("COL pack A\n");
+				// printf("COL pack A\n");
 				for (dim_t k = n; k != 0; --k) {
 					tmp = svld1_f64_x4(svptrue_c32(), alpha1);
 					svst1_f64_x4(svptrue_c32(), pi1, tmp);
@@ -104,8 +103,7 @@ void		bli_dpackm_m4sme_int_6x8
 			if (inca == 1 && ldp == 2 * SVL)
 				//continous memory.packA style
 			{
-				// printf("Pack A\n");
-				printf("ROW pack A\n");
+				// printf("ROW pack A\n");
 				for (dim_t k = n; k != 0; --k) {
 					tmp2 = svld1_f64_x2(svptrue_c32(), alpha1);
 					svst1_f64_x2(svptrue_c32(), pi1, tmp2);
@@ -117,10 +115,9 @@ void		bli_dpackm_m4sme_int_6x8
 			}
 			else if (inca != 1 && ldp == 2 * SVL) {
 				// printf("Cdim: %d Ldp: %d Lda: %d Inca: %d n: %d\n", cdim, ldp, lda, inca, n);
-				// printf("Pack B\n");
-				printf("COL pack B\n");
+				// printf("COL pack B\n");
 				{
-					for (uint64_t col = 0; col < n; col += 4 * SVL) { //o 2?
+					for (uint64_t col = 0; col < n; col += 4 * SVL) {
 						for (uint64_t trow = 0; trow < SVL; trow += 4) {
 							svcount_t	p0 = svptrue_c32();
 
@@ -137,7 +134,8 @@ void		bli_dpackm_m4sme_int_6x8
 							//		zp7[0] - SVL | zp7[1] - SVL
 
 							const		uint64_t tile_UL_corner = ( /* row + */ trow) * inca /* n */ + col;
-							const		uint64_t tile_UR_corner = ( /* row + */ trow) * inca * SVL /* n */ + col;
+							const		uint64_t tile_UR_corner = tile_UL_corner + inca * SVL;
+
 							svfloat64x4_t	zp0 = svld1_f64_x4(p0, &a_[tile_UL_corner + 0 * inca]);
 							//+col;
 							//+col;
@@ -286,10 +284,9 @@ void		bli_dpackm_m4sme_int_6x8
 			}
 			else if (inca != 1 && ldp == 4 * SVL) {
 				// printf("Cdim: %d Ldp: %d Lda: %d Inca: %d n: %d\n", cdim, ldp, lda, inca, n);
-				// printf("Pack B\n");
-				printf("ROW pack B\n");
+				// printf("ROW pack B\n");
 				{
-					for (uint64_t col = 0; col < n; col += 4 * SVL) { //o 2?
+					for (uint64_t col = 0; col < n; col += 2 * SVL) {
 						for (uint64_t trow = 0; trow < SVL; trow += 4) {
 							svcount_t	p0 = svptrue_c32();
 
@@ -306,9 +303,9 @@ void		bli_dpackm_m4sme_int_6x8
 							//		zp7[0] - SVL | zp7[1] - SVL
 
 							const		uint64_t tile_UL_corner = ( /* row + */ trow) * inca /* n */ + col;
-							const		uint64_t tile_UR_corner = ( /* row + */ trow) * inca * SVL /* n */ + col;
-							const		uint64_t tile_BL_corner = ( /* row + */ trow) * inca * 2 * SVL /* n */ + col;
-							const		uint64_t tile_BR_corner = ( /* row + */ trow) * inca * 3 * SVL /* n */ + col;
+							const		uint64_t tile_UR_corner = tile_UL_corner + inca * SVL;
+							const		uint64_t tile_BL_corner = tile_UL_corner + inca * 2 * SVL;
+							const		uint64_t tile_BR_corner = tile_UL_corner + inca * 3 * SVL;
 							svfloat64x2_t	zp0 = svld1_f64_x2(p0, &a_[tile_UL_corner + 0 * inca]);
 							//+col;
 							//+col;
@@ -347,13 +344,13 @@ void		bli_dpackm_m4sme_int_6x8
 					// Tile 2:SVL rows(bot) x SVL columns(left).Tile 3:SVL rows(bot) x SVL columns(right)
 
 							svwrite_hor_za64_f64_vg4(
-											  /* tile: */ 2, /* slice: */ trow, zq0);
+											  /* tile: */ 0, /* slice: */ trow, zq0);
 							svwrite_hor_za64_f64_vg4(
-										  /* tile: */ 6, /* slice: */ trow, zq1);
+										  /* tile: */ 4, /* slice: */ trow, zq1);
 							svwrite_hor_za64_f64_vg4(
-										  /* tile: */ 3, /* slice: */ trow, zq2);
+										  /* tile: */ 1, /* slice: */ trow, zq2);
 							svwrite_hor_za64_f64_vg4(
-										  /* tile: */ 7, /* slice: */ trow, zq3);
+										  /* tile: */ 5, /* slice: */ trow, zq3);
 
 							svfloat64x2_t	zp8 = svld1_f64_x2(p0, &a_[tile_BL_corner + 0 * inca]);
 							//+col;
@@ -456,14 +453,14 @@ void		bli_dpackm_m4sme_int_6x8
 							svfloat64x4_t	zq7_ = svcreate4(svget4(zq4, 3), svget4(zq5, 3),
 											 svget4(zq6, 3), svget4(zq7, 3));
 
-							svst1(p0, &p_[2 * SVL * SVL], zq4_);
-							svst1(p0, &p_[2 * SVL * SVL * 4 * SVL], zq5_);
-							svst1(p0, &p_[2 * SVL * SVL + 8 * SVL], zq6_);
-							svst1(p0, &p_[2 * SVL * SVL + 12 * SVL], zq7_);
+							svst1(p0, &p_[4 * SVL * SVL], zq4_);
+							svst1(p0, &p_[4 * SVL * SVL + 4 * SVL], zq5_);
+							svst1(p0, &p_[4 * SVL * SVL + 8 * SVL], zq6_);
+							svst1(p0, &p_[4 * SVL * SVL + 12 * SVL], zq7_);
 							
-							p_ += (16 * SVL);
+							p_ += (2 * SVL * SVL);
 						}
-						p_ += (32 * SVL);
+						p_ += (4 * SVL * SVL);
 
 						//p_ += (2 * SVL * SVL);
 					}
@@ -505,4 +502,5 @@ void		bli_dpackm_m4sme_int_6x8
 		 p_, ldp
 		);
 }
+
 
