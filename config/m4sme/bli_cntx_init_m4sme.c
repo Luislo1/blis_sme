@@ -72,8 +72,8 @@ void bli_cntx_init_m4sme( cntx_t* cntx )
 	//                                           s      d      c      z
 	bli_blksz_init_easy( &blkszs[ BLIS_MR ],    32,    32,    -1,    -1 );
 	bli_blksz_init_easy( &blkszs[ BLIS_NR ],    32,    16,    -1,    -1 );
-	bli_blksz_init_easy( &blkszs[ BLIS_MC ],   1280 /*1536 1280 160 or 640 good also*/,   1280,    -1,    -1 );
-	bli_blksz_init_easy( &blkszs[ BLIS_KC ],   1280 /*1536 1280  640*/,   1280,    -1,    -1 );
+	bli_blksz_init_easy( &blkszs[ BLIS_MC ],   1280 /*1536 1280 160 or 640 good also*/,   1024,    -1,    -1 );
+	bli_blksz_init_easy( &blkszs[ BLIS_KC ],   1280 /*1536 1280  640*/,   1024,    -1,    -1 );
 	bli_blksz_init_easy( &blkszs[ BLIS_NC ], 10240,  3072,    -1,    -1 );
 
 	// Update the context with the current architecture's register and cache
