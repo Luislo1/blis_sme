@@ -57,7 +57,7 @@ void bli_cntx_init_m4sme( cntx_t* cntx )
 	);
 
 	// Update the context with storage preferences.
-	// bli_cntx_set_ukr_prefs
+	 bli_cntx_set_ukr_prefs
 	(
 	  cntx,
 

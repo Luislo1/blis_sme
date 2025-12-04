@@ -214,14 +214,14 @@ void		bli_dpackm_m4sme_int_6x8
 						}
 
 						//Read - as - columns and store
-							for (uint64_t tcol = 0; tcol < SVL; tcol += 4) { //TODO esto esta mal seguramente
+							for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
 							svcount_t	p0 = svptrue_c32();
 
 							//Each svread_ver reads 4 columns of the tile(SVL).
 							svfloat64x4_t zq0 = svread_ver_za64_f64_vg4( /* tile: */ 0, /* slice: */ tcol);
-							svfloat64x4_t	zq2 = svread_ver_za64_f64_vg4( /* tile: */ 1, /* slice: */ tcol);
+							svfloat64x4_t	zq2 = svread_ver_za64_f64_vg4( /* tile: */ 2, /* slice: */ tcol);
 
-							svfloat64x4_t	zq1 = svread_ver_za64_f64_vg4( /* tile: */ 2, /* slice: */ tcol);
+							svfloat64x4_t	zq1 = svread_ver_za64_f64_vg4( /* tile: */ 1, /* slice: */ tcol);
 							svfloat64x4_t	zq3 = svread_ver_za64_f64_vg4( /* tile: */ 3, /* slice: */ tcol);
 
 							svst1(p0, &p_[0], zq0);
@@ -480,6 +480,7 @@ void		bli_dpackm_m4sme_int_6x8
 		 p_, ldp
 		);
 }
+
 
 
 
