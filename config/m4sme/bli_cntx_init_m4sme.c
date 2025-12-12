@@ -52,7 +52,7 @@ void bli_cntx_init_m4sme( cntx_t* cntx )
 	  BLIS_GEMM_UKR, BLIS_FLOAT,  bli_sgemm_m4sme_asm_8x12,
 	  BLIS_GEMM_UKR, BLIS_DOUBLE, bli_dgemm_m4sme_asm_6x8,
 	  BLIS_PACKM_KER, BLIS_FLOAT, bli_spackm_m4sme_int_8x12,
-	  //BLIS_PACKM_KER, BLIS_DOUBLE, bli_dpackm_m4sme_int_6x8,
+	  BLIS_PACKM_KER, BLIS_DOUBLE, bli_dpackm_m4sme_int_6x8,
 	  BLIS_VA_END
 	);
 
