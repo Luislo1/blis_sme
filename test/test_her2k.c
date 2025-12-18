@@ -299,6 +299,7 @@ int main( int argc, char** argv )
 		bli_obj_free( &beta );
 
 		bli_obj_free( &a );
+		bli_obj_free( &b );
 		bli_obj_free( &c );
 		bli_obj_free( &c_save );
 	}
