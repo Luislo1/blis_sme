@@ -46,7 +46,7 @@ THIS_CONFIG    := m4sme
 # general-purpose/configuration-agnostic flags in common.mk. You
 # may specify additional flags here as needed.
 CPPROCFLAGS    := -D_GNU_SOURCE
-CMISCFLAGS     := -O3 -std=c99 -march=native+sme2+sme-f64f64 -fno-exceptions -fno-rtti -mno-unaligned-access
+CMISCFLAGS     := -O3 -std=c99 -march=native+sme2+sme-f64f64 -fno-exceptions -fno-rtti -mno-unaligned-access -I /opt/homebrew/opt/libomp/include
 CPICFLAGS      := -fPIC
 CWARNFLAGS     :=
 
@@ -93,5 +93,6 @@ endif
 # Store all of the variables here to new variables containing the
 # configuration name.
 $(eval $(call store-make-defs,$(THIS_CONFIG)))
+
 
 
