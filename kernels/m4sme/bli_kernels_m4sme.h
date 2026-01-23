@@ -35,7 +35,7 @@
 PACKM_KER_PROT( float,    s, packm_m4sme_int_2SVLx2SVL )
 PACKM_KER_PROT( double,   d, packm_m4sme_int_4SVLx2SVL )
 
-__arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_int_2SVLx2SVL
+__arm_new( "za" ) __arm_locally_streaming void bli_sgemm_m4sme_int_2SVLx2SVL
      (
              dim_t      m,
              dim_t      n,
@@ -63,33 +63,5 @@ __arm_new( "za" ) __arm_locally_streaming void bli_dgemm_m4sme_int_4SVLx2SVL
        const cntx_t*    cntx
      );
 
-
-//GEMM_UKR_PROT( float,    s, gemm_m4sme_asm_8x12 )
-GEMM_UKR_PROT( double,   d, gemm_m4sme_asm_6x8 )
-GEMM_UKR_PROT( float,    s, gemm_m4sme_asm_12x8r )
-GEMM_UKR_PROT( double,   d, gemm_m4sme_asm_8x6r )
-// GEMM_UKR_PROT( double,   d, gemm_m4sme_asm_6x8r )
-// GEMM_UKR_PROT( double,   d, gemm_m4sme_asm_8x4 )
-// GEMM_UKR_PROT( double,   d, gemm_m4sme_asm_4x4 )
-
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_asm_6x8n )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_asm_6x8m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_6x8n )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_6x8m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_6x7m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_6x6m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_6x5m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_5x8n )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_4x8n )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_4x8m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_8x4m )
-
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_int_2x8 )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_int_3x4 )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_asm_3x4 )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_asm_6x3 )
-
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_int_6x4mn )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_int_3x8mn )
 
 
