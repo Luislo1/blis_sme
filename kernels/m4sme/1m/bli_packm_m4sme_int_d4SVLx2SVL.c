@@ -50,7 +50,7 @@
 #endif
 
 
-__arm_new("za") __arm_locally_streaming
+__arm_new( "za" ) __arm_locally_streaming
 void bli_dpackm_m4sme_int_4SVLx2SVL
 		(
 		 conj_t conja,

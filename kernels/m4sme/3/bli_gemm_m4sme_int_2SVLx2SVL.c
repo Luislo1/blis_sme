@@ -37,7 +37,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <arm_sme.h>
 
 #include "blis.h"
-#include "m4sme_asm_utils.h"
 
 #define SVPRFOP_READ  0
 #define SVPRFOP_WRITE 1
