@@ -49,10 +49,10 @@ void bli_cntx_init_m4sme( cntx_t* cntx )
 	  cntx,
 
 	  // level-3
-	  BLIS_GEMM_UKR, BLIS_FLOAT,  bli_sgemm_m4sme_asm_8x12,
-	  BLIS_GEMM_UKR, BLIS_DOUBLE, bli_dgemm_m4sme_asm_6x8,
-	  BLIS_PACKM_KER, BLIS_FLOAT, bli_spackm_m4sme_int_8x12,
-	  BLIS_PACKM_KER, BLIS_DOUBLE, bli_dpackm_m4sme_int_6x8,
+	  BLIS_GEMM_UKR, BLIS_FLOAT,  bli_sgemm_m4sme_int_SVLx4SVL,
+	  BLIS_GEMM_UKR, BLIS_DOUBLE, bli_dgemm_m4sme_int_SVLx8SVL,
+	  BLIS_PACKM_KER, BLIS_FLOAT, bli_spackm_m4sme_int_SVLx4SVL,
+	  BLIS_PACKM_KER, BLIS_DOUBLE, bli_dpackm_m4sme_int_SVLx8SVL,
 	  BLIS_VA_END
 	);
 
@@ -70,11 +70,11 @@ void bli_cntx_init_m4sme( cntx_t* cntx )
 
 	// Initialize level-3 blocksize objects with architecture-specific values.
 	//                                           s      d      c      z
-	bli_blksz_init_easy( &blkszs[ BLIS_MR ],    16,     8,    -1,    -1 );
-	bli_blksz_init_easy( &blkszs[ BLIS_NR ],    64,     64,    -1,    -1 );
-	bli_blksz_init_easy( &blkszs[ BLIS_MC ],   1280 /*160 or 640 good also*/,   1024,    -1,    -1 );
-	bli_blksz_init_easy( &blkszs[ BLIS_KC ],   1280/*640*/,   1024,    -1,    -1 );
-	bli_blksz_init_easy( &blkszs[ BLIS_NC ], 10240,  3072,    -1,    -1 );
+	bli_blksz_init_easy( &blkszs[ BLIS_MR ],    16,    8,     -1,    -1 );
+	bli_blksz_init_easy( &blkszs[ BLIS_NR ],    64,    64,    -1,    -1 );
+	bli_blksz_init_easy( &blkszs[ BLIS_MC ],    512,   512,   -1,    -1 );
+	bli_blksz_init_easy( &blkszs[ BLIS_KC ],    4032,  2016,  -1,    -1 );
+	bli_blksz_init_easy( &blkszs[ BLIS_NC ], 	10240, 3072,  -1,    -1 );
 
 	// Update the context with the current architecture's register and cache
 	// blocksizes (and multiples) for native execution.
@@ -92,5 +92,6 @@ void bli_cntx_init_m4sme( cntx_t* cntx )
 	  BLIS_VA_END
 	);
 }
+
 
 

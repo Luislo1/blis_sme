@@ -51,7 +51,7 @@
 
 
 __arm_new("za") __arm_locally_streaming
-void		bli_spackm_m4sme_int_8x12
+void		bli_spackm_m4sme_int_SVLx4SVL
 		(
 		 conj_t conja,
 		 pack_t schema,
@@ -67,7 +67,6 @@ void		bli_spackm_m4sme_int_8x12
 		 const cntx_t * cntx
 ){
 	 const		int64_t cdim = cdim_;
-	// const		int64_t mr = 64;
 	const		int64_t n = n_;
 	const		int64_t inca = inca_;
 	const		int64_t lda = lda_;
@@ -82,8 +81,6 @@ void		bli_spackm_m4sme_int_8x12
 
 	const float    *restrict alpha1 = a;
 	float	       *restrict pi1 = p;
-		// printf("%d %d %d %d %d %d\n", cdim, mr, cdim_bcast, ldp, lda, n);
-		// printf("Inca: %d\n", inca);
 	
 	const bool     gs     = ( inca != 1 && lda != 1 );
 
@@ -92,7 +89,6 @@ void		bli_spackm_m4sme_int_8x12
 			if (inca == 1 && ldp == 4 * SVL)
 				//continous memory.packA style
 			{
-				// printf("Pack A\n");
 				for (dim_t k = n; k != 0; --k) {
 					tmp = svld1_f32_x4(svptrue_c32(), alpha1);
 					svst1_f32_x4(svptrue_c32(), pi1, tmp);
@@ -105,7 +101,6 @@ void		bli_spackm_m4sme_int_8x12
 			if (inca == 1 && ldp == SVL)
 				//continous memory.packA style
 			{
-				// printf("Pack A\n");
 				for (dim_t k = n; k != 0; --k) {
 					tmp2 = svld1_f32(svptrue_b32(), alpha1);
 					svst1_f32(svptrue_b32(), pi1, tmp2);
@@ -116,14 +111,11 @@ void		bli_spackm_m4sme_int_8x12
 
 			}
 			else if (inca != 1 && ldp == SVL) {
-				// printf("Cdim: %d Ldp: %d Lda: %d Inca: %d n: %d\n", cdim, ldp, lda, inca, n);
-				// printf("Pack B\n");
 				{
 					for (uint64_t col = 0; col < n; col += 4 * SVL) {
 						for (uint64_t trow = 0; trow < SVL; trow += 4) {
 							svcount_t	p0 = svptrue_c32();
 
-							//const uint64_t tile_UL_corner = 0;
 							//Load 4 rows of A as double vectors(from the upper part).
 							//		zp0[0] - SVL | zp0[1] - SVL
 							//		zp1[0] - SVL | zp1[1] - SVL
@@ -137,14 +129,8 @@ void		bli_spackm_m4sme_int_8x12
 
 							const		uint64_t tile_UL_corner = ( /* row + */ trow) * inca /* n */ + col;
 							svfloat32x4_t	zp0 = svld1_f32_x4(p0, &a_[tile_UL_corner + 0 * inca]);
-							//+col;
-							//+col;
-							// printf("%d %d\n", tile_UL_corner, tile_BL_corner);
 							svfloat32x4_t	zp4 = svld1_f32_x4(p0, &a_[tile_UL_corner + 1 * inca]);
 							svfloat32x4_t	zp8 = svld1_f32_x4(p0, &a_[tile_UL_corner + 2 * inca]);
-							//+col;
-							//+col;
-							// printf("%d %d\n", tile_UL_corner, tile_BL_corner);
 							svfloat32x4_t	zp12 = svld1_f32_x4(p0, &a_[tile_UL_corner + 3 * inca]);
 
 							//zq0 < -zp0[0] | zp1[0] | zp2[0] | zp3[0]
@@ -188,13 +174,6 @@ void		bli_spackm_m4sme_int_8x12
 							svfloat32x4_t	zq1 = svread_ver_za32_f32_vg4( /* tile: */ 1, /* slice: */ tcol);
 							svfloat32x4_t	zq3 = svread_ver_za32_f32_vg4( /* tile: */ 3, /* slice: */ tcol);
 
-							// svst1(p0, &p_[0], zq0_);
-							// svst1(p0, &p_[4 * SVL], zq1_);
-							// svst1(p0, &p_[8 * SVL], zq2_);
-							// svst1(p0, &p_[12 * SVL], zq3_);
-
-							// p_ += (16 * SVL);
-
 							svst1(p0, &p_[0], zq0);
 							svst1(p0, &p_[SVL * SVL], zq1);
 							svst1(p0, &p_[2 * SVL * SVL], zq2);
@@ -203,8 +182,6 @@ void		bli_spackm_m4sme_int_8x12
 							p_ += (4 * SVL);
 						}
 						p_ += (3 * SVL * SVL);
-
-						//p_ += (2 * SVL * SVL);
 					}
 				}
 
@@ -212,7 +189,6 @@ void		bli_spackm_m4sme_int_8x12
 
 			}
 			else if (inca != 1 && ldp == 4 * SVL) {
-				// printf("Pack B\n");
 				{
 					for (uint64_t col = 0; col < n; col += SVL) {
 						for (uint64_t trow = 0; trow < SVL; trow += 4) {
@@ -221,7 +197,6 @@ void		bli_spackm_m4sme_int_8x12
 							svbool_t	p2 = svptrue_b32();
 							svbool_t	p3 = svptrue_b32();
 
-							//const uint64_t tile_UL_corner = 0;
 							//Load 4 rows of A as double vectors(from the upper part).
 							//		zp0[0] - SVL | zp0[1] - SVL
 							//		zp1[0] - SVL | zp1[1] - SVL
@@ -240,9 +215,6 @@ void		bli_spackm_m4sme_int_8x12
 							svfloat32_t	zp3 = svld1_f32(p3, &a_[tile_UL_corner + 3 * inca]);
 							
 							const		uint64_t tile_BL_corner = tile_UL_corner + inca * SVL;
-							//+col;
-							//+col;
-							// printf("%d %d\n", tile_UL_corner, tile_BL_corner);
 							svfloat32_t	zp4 = svld1_f32(p0, &a_[tile_BL_corner + 0 * inca]);
 							svfloat32_t	zp5 = svld1_f32(p1, &a_[tile_BL_corner + 1 * inca]);
 							svfloat32_t	zp6 = svld1_f32(p2, &a_[tile_BL_corner + 2 * inca]);
@@ -255,9 +227,6 @@ void		bli_spackm_m4sme_int_8x12
 							svfloat32_t	zp11 = svld1_f32(p3, &a_[tile_BBL_corner + 3 * inca]);
 
 							const		uint64_t tile_BBBL_corner = tile_UL_corner + 3 * inca * SVL;
-							//+col;
-							//+col;
-							// printf("%d %d\n", tile_UL_corner, tile_BL_corner);
 							svfloat32_t	zp12 = svld1_f32(p0, &a_[tile_BBBL_corner + 0 * inca]);
 							svfloat32_t	zp13 = svld1_f32(p1, &a_[tile_BBBL_corner + 1 * inca]);
 							svfloat32_t	zp14 = svld1_f32(p2, &a_[tile_BBBL_corner + 2 * inca]);
@@ -321,7 +290,6 @@ void		bli_spackm_m4sme_int_8x12
 							p_ += (16 * SVL);
 
 						}
-						//p_ += (2 * SVL * SVL);
 					}
 				}
 
@@ -361,6 +329,7 @@ void		bli_spackm_m4sme_int_8x12
 		 p_, ldp
 		);
 }
+
 
 
 

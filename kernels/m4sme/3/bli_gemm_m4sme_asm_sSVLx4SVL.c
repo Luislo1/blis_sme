@@ -35,7 +35,6 @@
 
 #include "blis.h"
 #include <arm_sme.h>
-#include "m4sme_asm_utils.h"
 
 #define SVPRFOP_READ   0
 #define SVPRFOP_WRITE  1
@@ -73,67 +72,7 @@
  * Tested on 1s Altra Max. Arnd 5,800 GFLOPS. 128 x N2 cores @ 3.0 GHz
 */
 
-#if 0
-void bli_sgemm_m4sme_asm_8x12_impl
-     (
-             dim_t      m,
-             dim_t      n,
-             dim_t      k,
-       const void*      alpha,
-       const void*      a,
-       const void*      b,
-       const void*      beta,
-             void*      c, inc_t rs_c0, inc_t cs_c0,
-       const auxinfo_t* data,
-       const cntx_t*    cntx
-     ) __arm_streaming __arm_inout("za")
-{
-	float * a_ = (float*)a;
-	float * b_ = (float*)b;
-	float * c_ = (float*)c;
- 	uint64_t SVL = svcntsw();
-//printf("SVL: %d. m=%lld. n=%lld. k=%lld\n", SVL, m, n, k);
-//printf("alpha: %f. beta=%f\n", *(float*)alpha, *(float*)beta);
-//printf("rs_c0: %d. cs_c0=%d\n", rs_c0, cs_c0);
-	svbool_t pMDim = svwhilelt_b32(m, m);
-	svbool_t pNDim = svwhilelt_b32(n, n);
-
-	svzero_za();
-
-	for (uint64_t k_ = 0; k_ < k; k_++) {
-                svfloat32_t zL = svld1(svptrue_b32(), (float32_t*)(&a_[k_ * SVL]));
-                svfloat32_t zR = svld1(svptrue_b32(), (float32_t*)(&b_[k_ * n  ]));
-                svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), zL, zR);
-	}
-
-	// Store ZA to matResult.
-        const uint64_t result_tile_UL_corner = 0;
-
-        for (uint64_t tcol = 0; tcol < SVL; tcol += 4) {
-                svbool_t p0 = svpsel_lane_b32(pNDim, pMDim, tcol + 0);
-                svbool_t p1 = svpsel_lane_b32(pNDim, pMDim, tcol + 1);
-                svbool_t p2 = svpsel_lane_b32(pNDim, pMDim, tcol + 2);
-                svbool_t p3 = svpsel_lane_b32(pNDim, pMDim, tcol + 3);
-
-		//printf("tcol: %d\n", tcol);
-                svst1_ver_za32(
-                    /* tile: */ 0, /* slice: */ tcol + 0, svptrue_b32(),
-                    &c_[result_tile_UL_corner + (tcol + 0) * cs_c0]);
-                svst1_ver_za32(
-                    /* tile: */ 0, /* slice: */ tcol + 1, svptrue_b32(),
-                    &c_[result_tile_UL_corner + (tcol + 1) * cs_c0]);
-                svst1_ver_za32(
-                    /* tile: */ 0, /* slice: */ tcol + 2, svptrue_b32(),
-                    &c_[result_tile_UL_corner + (tcol + 2) * cs_c0]);
-                svst1_ver_za32(
-                    /* tile: */ 0, /* slice: */ tcol + 3, svptrue_b32(),
-                    &c_[result_tile_UL_corner + (tcol + 3) * cs_c0]);
-        }
-	return;
-}
-#endif
-
-__arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
+__arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_int_SVLx4SVL
      (
              dim_t      m,
              dim_t      n,
@@ -147,15 +86,10 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
        const cntx_t*    cntx
      ) 
 {
-	GEMM_UKR_SETUP_CT_AMBI( s, 16, 64, false );
+ 	uint64_t SVL = svcntsw();
+	GEMM_UKR_SETUP_CT_AMBI( s, SVL, 4 * SVL, false );
 	float * a_ = (float*)a;
 	float * b_ = (float*)b;
- 	uint64_t SVL = svcntsw();
-//printf("SVL: %d. m=%lld. n=%lld. k=%lld\n", SVL, m, n, k);
-//printf("alpha: %f. beta=%f\n", *(float*)alpha, *(float*)beta);
-//printf("rs_c: %d. cs_c=%d\n", rs_c, cs_c);
-	//svbool_t pMDim = svwhilelt_b32(m, m);
-	//svbool_t pNDim = svwhilelt_b32(n, n);
 
 	const void* a_next = bli_auxinfo_next_a( data );
 	const void* b_next = bli_auxinfo_next_b( data );
@@ -171,23 +105,13 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 	uint64_t k_left = k%4;
 
 	for (k_ = 0; k_ < k_iter; k_++) {
-// Aplica prefetch explícito para lectura
-	//svprfb(svptrue_b32(), &a_[(k_+1) * (2*SVL)      ], 0);
-	//svprfb(svptrue_b32(), &a_[(k_+2) * (2*SVL)      ], 0);
-
-	//svprfb(svptrue_b32(), &b_[(k_+1) * (2*SVL)      ], 0);
-	//svprfb(svptrue_b32(), &b_[(k_+2) * (2*SVL)      ], 0);
 
 // Loads.
 		svfloat32x4_t zL00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&a_[0      ]));
 
 		svfloat32x4_t zR00 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[0     ]));
 
-	// svprfb(svptrue_b32(), &a_[(k_+3) * (SVL)      ], 0);
-// Prefetch (dudo si funciona).
 		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 0));
-// Prefetch (dudo si funciona).
-	// svprfb(svptrue_b32(), &b_[(k_+3) * (4*SVL)      ], 0);
 		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 0), svget4(zR00, 1));
 
 		svfloat32x4_t zR01 = svld1_f32_x4(svptrue_c32(), (float32_t*)(&b_[(4*SVL)      ]));
@@ -214,10 +138,8 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 
 
 		svmopa_za32_m(0, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,0));
-// Prefetch (dudo si funciona).
 		svprfb(svptrue_b32(), (float*)&a_next, 0);
 		svmopa_za32_m(1, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,1));
-// Prefetch (dudo si funciona).
 		svprfb(svptrue_b32(), (float*)&b_next, 0);
 		svmopa_za32_m(2, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,2));
 		svmopa_za32_m(3, svptrue_b32(), svptrue_b32(), svget4(zL00, 3), svget4(zR03,3));
@@ -727,37 +649,10 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
 	GEMM_UKR_FLUSH_CT( s );
 
 	return;
-
-     //bli_sgemm_m4sme_asm_8x12_impl(m,n,k,alpha, a, b, beta, c, rs_c0, cs_c0, data, cntx);
-//return;
 }
-/*
-   o 4x4 Double precision micro-kernel NOT fully functional yet.
-   o Runnable on ARMv8, compiled with aarch64 GCC.
-   o Use it together with the armv8 BLIS configuration.
-   o Tested on Juno board. Around 3 GFLOPS @ 1.1 GHz.
 
-   December 2014.
-
- * UPDATE OCTOBER 2015: Now is fully functional.
- * Tested on Juno board. Around 5.6 GFLOPS, 2 A57 cores @ 1.1 GHz.
- * Tested on Juno board. Around 4 GFLOPS, 4 A53 cores @ 850 MHz.
-
- * UPDATE NOVEMBER 2015
- * Micro-kernel changed to 6x8
- * Tested on Juno Board. Around 4   GFLOPS, 1 x A57 core  @ 1.1 GHz.
- * Tested on Juno Board. Around 7.6 GFLOPS, 2 x A57 cores @ 1.1 GHz.
- * Tested on Juno board. Around 1.5 GFLOPS, 1 x A53 core  @ 850 MHz.
- * Tested on Juno board. Around 5.5 GFLOPS, 4 x A53 cores @ 850 MHz.
-
- * UPDATE JULY 2021 - Leick Robinson
- * Both Microkernels changed to fix two prefetching performance bugs
- * Tested on 2s Altra. Around 3,200 GFLOPS, 160 x N2 cores @ 3.0 GHz
- * Tested on 1s Altra, Around 1,700 GFLOPS,  80 x N2 cores @ 3.0 GHz
- * Tested on 1s Altra Max,  ~ 2,600 GFLOPS, 128 x N2 cores @ 3.0 GHz
-*/
 __arm_new("za") __arm_locally_streaming 
-void bli_dgemm_m4sme_asm_6x8
+void bli_dgemm_m4sme_int_SVLx8SVL
      (
              dim_t      m,
              dim_t      n,
@@ -772,11 +667,12 @@ void bli_dgemm_m4sme_asm_6x8
      )
 {
 
-	GEMM_UKR_SETUP_CT_AMBI( d, 8, 64, false );
-	double * a_ = (double*)a;
-	double * b_ = (double*)b;
  	uint64_t SVL = svcntsd();
 
+	GEMM_UKR_SETUP_CT_AMBI( d, SVL, 8 * SVL, false );
+
+	double * a_ = (double*)a;
+	double * b_ = (double*)b;
 	double * c_ = (double*)c;
 
 	svzero_za();
@@ -852,8 +748,8 @@ void bli_dgemm_m4sme_asm_6x8
                 svmopa_za64_m(6, svptrue_b32(), svptrue_b32(), svget4(zL07,2), zR03);
                 svmopa_za64_m(7, svptrue_b32(), svptrue_b32(), svget4(zL07,3), zR03);
 
-		b_ += (32*SVL);
 		a_ += (4*SVL);
+		b_ += (4*8*SVL);
 
 	}
 
@@ -874,13 +770,12 @@ void bli_dgemm_m4sme_asm_6x8
                 svmopa_za64_m(6, svptrue_b32(), svptrue_b32(), svget4(zL01,2), zR00);
                 svmopa_za64_m(7, svptrue_b32(), svptrue_b32(), svget4(zL01,3), zR00);
 
-		b_ += (8*SVL);
 		a_ += (SVL);
+		b_ += (8*SVL);
 	}
 
 	double beta_ = *(double*) beta;
 	double alpha_ = *(double*) alpha;
-#if 1
 
 	const uint64_t result_tile_TL_corner = 0;
 
@@ -1790,9 +1685,9 @@ void bli_dgemm_m4sme_asm_6x8
 			}
 		}
 	}
-#endif
 	GEMM_UKR_FLUSH_CT( d );
 	return;
 
 
 }
+
