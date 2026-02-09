@@ -35,36 +35,28 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <arm_acle.h>
 #include <arm_sme.h>
-
 #include "blis.h"
 
-#define SVPRFOP_READ  0
-#define SVPRFOP_WRITE 1
-#define SVPRFOP_STRM  2
-#define SVPRFOP_NOP	  3
-
-__arm_new( "za" ) __arm_locally_streaming 
-void bli_sgemm_m4sme_int_2SVLx2SVL
-(
-	dim_t      m,
-	dim_t      n,
-	dim_t      k,
-	const void*      alpha,
-	const void*      a,
-	const void*      b,
-	const void*      beta,
-	void*      c, inc_t rs_c, inc_t cs_c,
-	const auxinfo_t* data,
-	const cntx_t*    cntx
-) 
+__arm_new( "za" ) __arm_locally_streaming void bli_sgemm_m4sme_int_2SVLx2SVL
+	(
+			  dim_t      m,
+			  dim_t      n,
+			  dim_t      k,
+		const void*      alpha,
+		const void*      a,
+		const void*      b,
+		const void*      beta,
+			  void*		 c, inc_t rs_c, inc_t cs_c,
+		const auxinfo_t* data,
+		const cntx_t*    cntx
+	) 
 {
-	GEMM_UKR_SETUP_CT_AMBI( s, 32, 32, false );
+	uint64_t SVL = svcntsw();
+
+	GEMM_UKR_SETUP_CT_AMBI( s, 2 * SVL, 2 * SVL, false );
 
 	float *a_ = (float *)a;
 	float *b_ = (float *)b;
-
-
-	uint64_t SVL = svcntsw();
 
 	float *a_next = (float *)bli_auxinfo_next_a( data );
 	float *b_next = (float *)bli_auxinfo_next_b( data );
@@ -213,8 +205,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 			svget4( zR02, 3 ) );
 		svmopa_za32_m( 3, svptrue_b32(), svptrue_b32(), svget4( zL02, 3 ),
 			svget4( zR02, 3 ) );
-
-		//////////////
 
 		svfloat32x4_t zL04 = svld1_f32_x4( svptrue_c32(),
 			(float32_t *)( &a_[8 * SVL] ) );
@@ -418,8 +408,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 			for ( uint64_t tcol = 0; tcol < SVL; tcol += 4 )
 			{
 				// Read ZA slices into Z regs
-				//  svfloat32x4_t z00 = svread_ver_za32_f32_vg4(
-				//  	/* tile: */ 0, /* slice: */ tcol + 0 );
 				svfloat32_t z0 = svread_ver_za32_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 0 );
 				svfloat32_t z1 = svread_ver_za32_m( z1, svptrue_b32(),
@@ -470,7 +458,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 				svfloat32_t z31 = svread_ver_za32_m( z31, svptrue_b32(),
 					/* tile: */ 3, /* slice: */ tcol + 1 );
 
-				// z0 = svmul_f32_z( svptrue_b32(), svget4( z00, 1 ), zalpha );
 				svfloat32_t z02 = svmul_f32_z( svptrue_b32(), z01, zalpha );
 				svfloat32_t z12 = svmul_f32_z( svptrue_b32(), z11, zalpha );
 				svfloat32_t z22 = svmul_f32_z( svptrue_b32(), z21, zalpha );
@@ -507,7 +494,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 				svfloat32_t z33 = svread_ver_za32_m( z33, svptrue_b32(),
 					/* tile: */ 3, /* slice: */ tcol + 2 );
 
-				// z0 = svmul_f32_z( svptrue_b32(), svget4( z00, 2 ), zalpha );
 				svfloat32_t z04 = svmul_f32_z( svptrue_b32(), z03, zalpha );
 				svfloat32_t z14 = svmul_f32_z( svptrue_b32(), z13, zalpha );
 				svfloat32_t z24 = svmul_f32_z( svptrue_b32(), z23, zalpha );
@@ -544,7 +530,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 				svfloat32_t z35 = svread_ver_za32_m( z35, svptrue_b32(),
 					/* tile: */ 3, /* slice: */ tcol + 3 );
 
-				// z0 = svmul_f32_z( svptrue_b32(), svget4( z00, 3 ), zalpha );
 				svfloat32_t z06 = svmul_f32_z( svptrue_b32(), z05, zalpha );
 				svfloat32_t z16 = svmul_f32_z( svptrue_b32(), z15, zalpha );
 				svfloat32_t z26 = svmul_f32_z( svptrue_b32(), z25, zalpha );
@@ -583,9 +568,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 			for ( uint64_t tcol = 0; tcol < SVL; tcol += 4 )
 			{
 				// Read ZA slices into Z regs
-				//  svfloat32x4_t z00 = svread_hor_za32_f32_vg4(
-				//  	/* tile: */ 0, /* slice: */ tcol + 0 );
-
 				svfloat32_t z0 = svread_hor_za32_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 0 );
 				svfloat32_t z1 = svread_hor_za32_m( z1, svptrue_b32(),
@@ -620,7 +602,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 				z3 = svread_hor_za32_m( z3, svptrue_b32(),
 					/* tile: */ 3, /* slice: */ tcol + 1 );
 
-				// z0 = svmul_f32_z( svptrue_b32(), svget4( z00, 1 ), zalpha );
 				z0 = svmul_f32_z( svptrue_b32(), z0, zalpha );
 				z1 = svmul_f32_z( svptrue_b32(), z1, zalpha );
 				z2 = svmul_f32_z( svptrue_b32(), z2, zalpha );
@@ -643,7 +624,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 				z3 = svread_hor_za32_m( z3, svptrue_b32(),
 					/* tile: */ 3, /* slice: */ tcol + 2 );
 
-				// z0 = svmul_f32_z( svptrue_b32(), svget4( z00, 2 ), zalpha );
 				z0 = svmul_f32_z( svptrue_b32(), z0, zalpha );
 				z1 = svmul_f32_z( svptrue_b32(), z1, zalpha );
 				z2 = svmul_f32_z( svptrue_b32(), z2, zalpha );
@@ -666,7 +646,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 				z3 = svread_hor_za32_m( z3, svptrue_b32(),
 					/* tile: */ 3, /* slice: */ tcol + 3 );
 
-				// z0 = svmul_f32_z( svptrue_b32(), svget4( z00, 3 ), zalpha );
 				z0 = svmul_f32_z( svptrue_b32(), z0, zalpha );
 				z1 = svmul_f32_z( svptrue_b32(), z1, zalpha );
 				z2 = svmul_f32_z( svptrue_b32(), z2, zalpha );
@@ -686,8 +665,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 			for ( uint64_t tcol = 0; tcol < SVL; tcol += 4 )
 			{
 				// Read ZA slices into Z regs
-				//  svfloat32x4_t z00 = svread_ver_za32_f32_vg4(
-				//  	/* tile: */ 0, /* slice: */ tcol + 0 );
 				svfloat32_t z0 = svread_hor_za32_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 0 );
 				svfloat32_t z1 = svread_hor_za32_m( z1, svptrue_b32(),
@@ -738,7 +715,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 				svfloat32_t z31 = svread_hor_za32_m( z31, svptrue_b32(),
 					/* tile: */ 3, /* slice: */ tcol + 1 );
 
-				// z0 = svmul_f32_z( svptrue_b32(), svget4( z00, 1 ), zalpha );
 				svfloat32_t z02 = svmul_f32_z( svptrue_b32(), z01, zalpha );
 				svfloat32_t z12 = svmul_f32_z( svptrue_b32(), z11, zalpha );
 				svfloat32_t z22 = svmul_f32_z( svptrue_b32(), z21, zalpha );
@@ -775,7 +751,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 				svfloat32_t z33 = svread_hor_za32_m( z33, svptrue_b32(),
 					/* tile: */ 3, /* slice: */ tcol + 2 );
 
-				// z0 = svmul_f32_z( svptrue_b32(), svget4( z00, 2 ), zalpha );
 				svfloat32_t z04 = svmul_f32_z( svptrue_b32(), z03, zalpha );
 				svfloat32_t z14 = svmul_f32_z( svptrue_b32(), z13, zalpha );
 				svfloat32_t z24 = svmul_f32_z( svptrue_b32(), z23, zalpha );
@@ -812,7 +787,6 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 				svfloat32_t z35 = svread_hor_za32_m( z35, svptrue_b32(),
 					/* tile: */ 3, /* slice: */ tcol + 3 );
 
-				// z0 = svmul_f32_z( svptrue_b32(), svget4( z00, 3 ), zalpha );
 				svfloat32_t z06 = svmul_f32_z( svptrue_b32(), z05, zalpha );
 				svfloat32_t z16 = svmul_f32_z( svptrue_b32(), z15, zalpha );
 				svfloat32_t z26 = svmul_f32_z( svptrue_b32(), z25, zalpha );
@@ -846,39 +820,10 @@ void bli_sgemm_m4sme_int_2SVLx2SVL
 	GEMM_UKR_FLUSH_CT( s );
 
 	return;
-
-	// bli_sgemm_m4sme_asm_8x12_impl(m,n,k,alpha, a, b, beta, c, rs_c, cs_c,
-	// data, cntx); return;
 }
 
-/*
-   o 4x4 Double precision micro-kernel NOT fully functional yet.
-   o Runnable on ARMv8, compiled with aarch64 GCC.
-   o Use it together with the armv8 BLIS configuration.
-   o Tested on Juno board. Around 3 GFLOPS @ 1.1 GHz.
-
-   December 2014.
-
- * UPDATE OCTOBER 2015: Now is fully functional.
- * Tested on Juno board. Around 5.6 GFLOPS, 2 A57 cores @ 1.1 GHz.
- * Tested on Juno board. Around 4 GFLOPS, 4 A53 cores @ 850 MHz.
-
- * UPDATE NOVEMBER 2015
- * Micro-kernel changed to 6x8
- * Tested on Juno Board. Around 4   GFLOPS, 1 x A57 core  @ 1.1 GHz.
- * Tested on Juno Board. Around 7.6 GFLOPS, 2 x A57 cores @ 1.1 GHz.
- * Tested on Juno board. Around 1.5 GFLOPS, 1 x A53 core  @ 850 MHz.
- * Tested on Juno board. Around 5.5 GFLOPS, 4 x A53 cores @ 850 MHz.
-
- * UPDATE JULY 2021 - Leick Robinson
- * Both Microkernels changed to fix two prefetching performance bugs
- * Tested on 2s Altra. Around 3,200 GFLOPS, 160 x N2 cores @ 3.0 GHz
- * Tested on 1s Altra, Around 1,700 GFLOPS,  80 x N2 cores @ 3.0 GHz
- * Tested on 1s Altra Max,  ~ 2,600 GFLOPS, 128 x N2 cores @ 3.0 GHz
- */
-__arm_new( "za" ) __arm_locally_streaming 
-void bli_dgemm_m4sme_int_4SVLx2SVL
-     (
+__arm_new( "za" ) __arm_locally_streaming void bli_dgemm_m4sme_int_4SVLx2SVL
+	(
              dim_t      m,
              dim_t      n,
              dim_t      k,
@@ -889,13 +834,14 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
              void*      c, inc_t rs_c, inc_t cs_c,
        const auxinfo_t* data,
        const cntx_t*    cntx
-     )
+	)
 {
-	GEMM_UKR_SETUP_CT_AMBI( d, 32, 16, false );
-	double *a_ = (double *)a;
-	double *b_ = (double *)b;
 	uint64_t SVL = svcntsd();
 
+	GEMM_UKR_SETUP_CT_AMBI( d, 4 * SVL, 2 * SVL, false );
+
+	double *a_ = (double *)a;
+	double *b_ = (double *)b;
 	double *c_ = (double *)c;
 
 	svzero_za();
@@ -906,7 +852,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 
 	for ( k_ = 0; k_ < k_iter; k_++ )
 	{
-		// Loads.
+		// Loads
 		svfloat64x4_t zL00 = svld1_f64_x4( svptrue_c32(),
 			(float64_t *)( &a_[0] ) );
 		svfloat64x2_t zR00 = svld1_f64_x2( svptrue_c32(),
@@ -1058,7 +1004,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 		{
 			for ( uint64_t tcol = 0; tcol < SVL; tcol += 4 )
 			{
-				// tcol + 0.
+				// Read ZA slices into Z regs
 				svfloat64_t z0 = svread_ver_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 0 );
 				svfloat64_t z1 = svread_ver_za64_m( z1, svptrue_b32(),
@@ -1095,7 +1041,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x4( svptrue_c32(),
 					&c_[result_tile_TR_corner + ( tcol + 0 ) * cs_c], z600 );
 
-				// tcol + 1.
+				// tcol + 1
 				z0 = svread_ver_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 1 );
 				z1 = svread_ver_za64_m( z1, svptrue_b32(),
@@ -1130,7 +1076,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x4( svptrue_c32(),
 					&c_[result_tile_TR_corner + ( tcol + 1 ) * cs_c], z600 );
 
-				// tcol + 2.
+				// tcol + 2
 				z0 = svread_ver_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 2 );
 				z1 = svread_ver_za64_m( z1, svptrue_b32(),
@@ -1165,7 +1111,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x4( svptrue_c32(),
 					&c_[result_tile_TR_corner + ( tcol + 2 ) * cs_c], z600 );
 
-				// tcol + 3.
+				// tcol + 3
 				z0 = svread_ver_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 3 );
 				z1 = svread_ver_za64_m( z1, svptrue_b32(),
@@ -1205,7 +1151,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 		{
 			for ( uint64_t tcol = 0; tcol < SVL; tcol += 4 )
 			{
-				// tcol + 0.
+				// Read ZA slices into Z regs
 				svfloat64_t z0 = svread_ver_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 0 );
 				svfloat64_t z1 = svread_ver_za64_m( z1, svptrue_b32(),
@@ -1266,7 +1212,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x4( svptrue_c32(),
 					&c_[result_tile_TR_corner + ( tcol + 0 ) * cs_c], z600 );
 
-				// tcol + 1.
+				// tcol + 1
 				z0 = svread_ver_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 1 );
 				z1 = svread_ver_za64_m( z1, svptrue_b32(),
@@ -1315,7 +1261,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x4( svptrue_c32(),
 					&c_[result_tile_TR_corner + ( tcol + 1 ) * cs_c], z600 );
 
-				// tcol + 2.
+				// tcol + 2
 				z0 = svread_ver_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 2 );
 				z1 = svread_ver_za64_m( z1, svptrue_b32(),
@@ -1364,7 +1310,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x4( svptrue_c32(),
 					&c_[result_tile_TR_corner + ( tcol + 2 ) * cs_c], z600 );
 
-				// tcol + 3.
+				// tcol + 3
 				z0 = svread_ver_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 3 );
 				z1 = svread_ver_za64_m( z1, svptrue_b32(),
@@ -1425,7 +1371,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 		{
 			for ( uint64_t tcol = 0; tcol < SVL; tcol += 4 )
 			{
-				// tcol + 0.
+				// Read ZA slices into Z regs
 				svfloat64_t z0 = svread_hor_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 0 );
 				svfloat64_t z1 = svread_hor_za64_m( z1, svptrue_b32(),
@@ -1469,7 +1415,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x2( svptrue_c32(),
 					&c_[result_tile_BR_corner + ( tcol + 0 ) * rs_c], z800 );
 
-				// tcol + 1.
+				// tcol + 1
 				z0 = svread_hor_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 1 );
 				z1 = svread_hor_za64_m( z1, svptrue_b32(),
@@ -1512,7 +1458,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x2( svptrue_c32(),
 					&c_[result_tile_BR_corner + ( tcol + 1 ) * rs_c], z800 );
 
-				// tcol + 2.
+				// tcol + 2
 				z0 = svread_hor_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 2 );
 				z1 = svread_hor_za64_m( z1, svptrue_b32(),
@@ -1555,7 +1501,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x2( svptrue_c32(),
 					&c_[result_tile_BR_corner + ( tcol + 2 ) * rs_c], z800 );
 
-				// tcol + 3.
+				// tcol + 3
 				z0 = svread_hor_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 3 );
 				z1 = svread_hor_za64_m( z1, svptrue_b32(),
@@ -1603,7 +1549,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 		{
 			for ( uint64_t tcol = 0; tcol < SVL; tcol += 4 )
 			{
-				// tcol + 0.
+				// Read ZA slices into Z regs
 				svfloat64_t z0 = svread_hor_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 0 );
 				svfloat64_t z1 = svread_hor_za64_m( z1, svptrue_b32(),
@@ -1677,7 +1623,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x2( svptrue_c32(),
 					&c_[result_tile_BR_corner + ( tcol + 0 ) * rs_c], z800 );
 
-				// tcol + 1.
+				// tcol + 1
 				z0 = svread_hor_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 1 );
 				z1 = svread_hor_za64_m( z1, svptrue_b32(),
@@ -1738,7 +1684,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x2( svptrue_c32(),
 					&c_[result_tile_BR_corner + ( tcol + 1 ) * rs_c], z800 );
 
-				// tcol + 2.
+				// tcol + 2
 				z0 = svread_hor_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 2 );
 				z1 = svread_hor_za64_m( z1, svptrue_b32(),
@@ -1799,7 +1745,7 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 				svst1_f64_x2( svptrue_c32(),
 					&c_[result_tile_BR_corner + ( tcol + 2 ) * rs_c], z800 );
 
-				// tcol + 3.
+				// tcol + 3
 				z0 = svread_hor_za64_m( z0, svptrue_b32(),
 					/* tile: */ 0, /* slice: */ tcol + 3 );
 				z1 = svread_hor_za64_m( z1, svptrue_b32(),
@@ -1867,4 +1813,5 @@ void bli_dgemm_m4sme_int_4SVLx2SVL
 
 	return;
 }
+
 

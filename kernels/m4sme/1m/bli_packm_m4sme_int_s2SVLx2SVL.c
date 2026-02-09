@@ -33,22 +33,7 @@
 
 #include <arm_sme.h>
 #include <arm_sve.h>
-
 #include "blis.h"
-
-#if defined( __clang__ )
-#define PRAGMA_NOUNROLL _Pragma( "nounroll" )
-#define PRAGMA_UNROLL_2 _Pragma( "unroll 2" )
-#define PRAGMA_UNROLL_4 _Pragma( "unroll 4" )
-#elif defined( __GNUC__ )
-#define PRAGMA_NOUNROLL _Pragma( "GCC unroll 1" )
-#define PRAGMA_UNROLL_2 _Pragma( "GCC unroll 2" )
-#define PRAGMA_UNROLL_4 _Pragma( "GCC unroll 4" )
-#else
-#define PRAGMA_NOUNROLL
-#define PRAGMA_UNROLL_2
-#define PRAGMA_UNROLL_4
-#endif
 
 
 __arm_new( "za" ) __arm_locally_streaming
@@ -69,7 +54,6 @@ void bli_spackm_m4sme_int_2SVLx2SVL
 )
 {
 	const int64_t cdim = cdim_;
-	const int64_t mr = 32;
 	const int64_t n = n_;
 	const int64_t inca = inca_;
 	const int64_t lda = lda_;
@@ -79,6 +63,7 @@ void bli_spackm_m4sme_int_2SVLx2SVL
 	float* restrict p_ = (float*)p;
 
 	uint64_t SVL = svcntsw();
+
 	svfloat32x2_t tmp;
 
 	const float* restrict alpha1 = a;
@@ -86,7 +71,7 @@ void bli_spackm_m4sme_int_2SVLx2SVL
 
 	const bool gs = ( inca != 1 && lda != 1 );
 
-	if ( cdim == mr && cdim_bcast == 1 && !gs )
+	if ( cdim == 2 * SVL && cdim_bcast == 1 && !gs )
 	{
 		if ( bli_seq1( *( (float*)kappa ) ) )
 		{
@@ -141,9 +126,6 @@ void bli_spackm_m4sme_int_2SVLx2SVL
 
 							const uint64_t tile_BL_corner = tile_UL_corner +
 								inca * SVL;
-							//+col;
-							// printf("%d %d\n", tile_UL_corner,
-							// tile_BL_corner);
 							svfloat32x2_t zp4 = svld1_f32_x2( p0,
 								&a_[tile_BL_corner + 0 * inca] );
 							svfloat32x2_t zp5 = svld1_f32_x2( p1,
@@ -270,4 +252,5 @@ void bli_spackm_m4sme_int_2SVLx2SVL
 		 p_, ldp
 		);
 }
+
 

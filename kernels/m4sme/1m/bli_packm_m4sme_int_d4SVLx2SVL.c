@@ -35,20 +35,7 @@
 
 #include <arm_sme.h>
 #include <arm_sve.h>
-
 #include "blis.h"
-
-#if defined( __clang__ )
-#define PRAGMA_NOUNROLL _Pragma( "nounroll" )
-#define PRAGMA_UNROLL_2 _Pragma( "unroll 2" )
-#elif defined( __GNUC__ )
-#define PRAGMA_NOUNROLL _Pragma( "GCC unroll 1" )
-#define PRAGMA_UNROLL_2 _Pragma( "GCC unroll 2" )
-#else
-#define PRAGMA_NOUNROLL
-#define PRAGMA_UNROLL_2
-#endif
-
 
 __arm_new( "za" ) __arm_locally_streaming
 void bli_dpackm_m4sme_int_4SVLx2SVL
@@ -67,7 +54,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 		 const cntx_t * cntx
 ){
 	const int64_t cdim = cdim_;
-	// const		int64_t mr = 64;
 	const int64_t n = n_;
 	const int64_t inca = inca_;
 	const int64_t lda = lda_;
@@ -77,22 +63,22 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 	double* restrict p_ = (double*)p;
 
 	uint64_t SVL = svcntsd();
+
 	svfloat64x4_t tmp;
 	svfloat64x2_t tmp2;
 
 	const double* restrict alpha1 = a;
 	double* restrict pi1 = p;
-	// printf("%d %d %d %d %d %d\n", cdim, mr, cdim_bcast, ldp, lda, n);
-	// printf("Inca: %d\n", inca);
+
 	const bool gs = ( inca != 1 && lda != 1 );
-	if ( !gs && ( cdim == 32 || cdim == 16 ) && cdim_bcast )
+
+	if ( !gs && ( cdim == 4 * SVL || cdim == 2 * SVL ) && cdim_bcast )
 	{
 		if ( bli_deq1( *( (double*)kappa ) ) )
 		{
 			if ( inca == 1 && ldp == 4 * SVL )
 			// continous memory.packA style
 			{
-				// printf("COL pack A\n");
 				for ( dim_t k = n; k != 0; --k )
 				{
 					tmp = svld1_f64_x4( svptrue_c32(), alpha1 );
@@ -105,7 +91,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 			if ( inca == 1 && ldp == 2 * SVL )
 			// continous memory.packA style
 			{
-				// printf("ROW pack A\n");
 				for ( dim_t k = n; k != 0; --k )
 				{
 					tmp2 = svld1_f64_x2( svptrue_c32(), alpha1 );
@@ -117,8 +102,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 			}
 			else if ( inca != 1 && ldp == 2 * SVL )
 			{
-				// printf("Cdim: %d Ldp: %d Lda: %d Inca: %d n: %d\n", cdim,
-				// ldp, lda, inca, n); printf("COL pack B\n");
 				{
 					for ( uint64_t col = 0; col < n; col += 4 * SVL )
 					{
@@ -126,7 +109,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 						{
 							svcount_t p0 = svptrue_c32();
 
-							// const uint64_t tile_UL_corner = 0;
 							//	Load 4 rows of A as double vectors 
 							//	(from the upper part).
 							//	zp0[0] - SVL | zp0[1] - SVL
@@ -147,9 +129,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 
 							svfloat64x4_t zp0 = svld1_f64_x4( p0,
 								&a_[tile_UL_corner + 0 * inca] );
-							//+col;
-							// printf("%d %d\n", tile_UL_corner,
-							// tile_BL_corner);
 							svfloat64x4_t zp1 = svld1_f64_x4( p0,
 								&a_[tile_UL_corner + 1 * inca] );
 							svfloat64x4_t zp2 = svld1_f64_x4( p0,
@@ -195,9 +174,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 
 							svfloat64x4_t zp4 = svld1_f64_x4( p0,
 								&a_[tile_UR_corner + 0 * inca] );
-							//+col;
-							// printf("%d %d\n", tile_UL_corner,
-							// tile_BL_corner);
 							svfloat64x4_t zp5 = svld1_f64_x4( p0,
 								&a_[tile_UR_corner + 1 * inca] );
 							svfloat64x4_t zp6 = svld1_f64_x4( p0,
@@ -258,13 +234,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 							svfloat64x4_t zq3 = svread_ver_za64_f64_vg4(
 								/* tile: */ 5, /* slice: */ tcol );
 
-							// svst1(p0, &p_[0], zq0_);
-							// svst1(p0, &p_[4 * SVL], zq1_);
-							// svst1(p0, &p_[8 * SVL], zq2_);
-							// svst1(p0, &p_[12 * SVL], zq3_);
-
-							// p_ += (16 * SVL);
-
 							svfloat64x4_t zq0_ = svcreate4( svget4( zq1, 0 ),
 								svget4( zq0, 0 ), svget4( zq1, 1 ),
 								svget4( zq0, 1 ) );
@@ -321,8 +290,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 							p_ += ( 8 * SVL );
 						}
 						p_ += ( 6 * SVL * SVL );
-
-						// p_ += (2 * SVL * SVL);
 					}
 				}
 
@@ -330,8 +297,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 			}
 			else if ( inca != 1 && ldp == 4 * SVL )
 			{
-				// printf("Cdim: %d Ldp: %d Lda: %d Inca: %d n: %d\n", cdim,
-				// ldp, lda, inca, n); printf("ROW pack B\n");
 				{
 					for ( uint64_t col = 0; col < n; col += 2 * SVL )
 					{
@@ -339,7 +304,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 						{
 							svcount_t p0 = svptrue_c32();
 
-							// const uint64_t tile_UL_corner = 0;
 							//	Load 4 rows of A as double vectors 
 							//	(from the upper part).
 							//	zp0[0] - SVL | zp0[1] - SVL
@@ -363,9 +327,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 								inca * 3 * SVL;
 							svfloat64x2_t zp0 = svld1_f64_x2( p0,
 								&a_[tile_UL_corner + 0 * inca] );
-							//+col;
-							// printf("%d %d\n", tile_UL_corner,
-							// tile_BL_corner);
 							svfloat64x2_t zp1 = svld1_f64_x2( p0,
 								&a_[tile_UL_corner + 1 * inca] );
 							svfloat64x2_t zp2 = svld1_f64_x2( p0,
@@ -375,9 +336,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 
 							svfloat64x2_t zp4 = svld1_f64_x2( p0,
 								&a_[tile_UR_corner + 0 * inca] );
-							//+col;
-							// printf("%d %d\n", tile_UL_corner,
-							// tile_BL_corner);
 							svfloat64x2_t zp5 = svld1_f64_x2( p0,
 								&a_[tile_UR_corner + 1 * inca] );
 							svfloat64x2_t zp6 = svld1_f64_x2( p0,
@@ -423,9 +381,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 
 							svfloat64x2_t zp8 = svld1_f64_x2( p0,
 								&a_[tile_BL_corner + 0 * inca] );
-							//+col;
-							// printf("%d %d\n", tile_UL_corner,
-							// tile_BL_corner);
 							svfloat64x2_t zp9 = svld1_f64_x2( p0,
 								&a_[tile_BL_corner + 1 * inca] );
 							svfloat64x2_t zp10 = svld1_f64_x2( p0,
@@ -435,9 +390,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 
 							svfloat64x2_t zp12 = svld1_f64_x2( p0,
 								&a_[tile_BR_corner + 0 * inca] );
-							//+col;
-							// printf("%d %d\n", tile_UL_corner,
-							// tile_BL_corner);
 							svfloat64x2_t zp13 = svld1_f64_x2( p0,
 								&a_[tile_BR_corner + 1 * inca] );
 							svfloat64x2_t zp14 = svld1_f64_x2( p0,
@@ -498,13 +450,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 							svfloat64x4_t zq3 = svread_ver_za64_f64_vg4(
 								/* tile: */ 3, /* slice: */ tcol );
 
-							// svst1(p0, &p_[0], zq0_);
-							// svst1(p0, &p_[4 * SVL], zq1_);
-							// svst1(p0, &p_[8 * SVL], zq2_);
-							// svst1(p0, &p_[12 * SVL], zq3_);
-
-							// p_ += (16 * SVL);
-
 							svfloat64x4_t zq0_ = svcreate4( svget4( zq0, 0 ),
 								svget4( zq1, 0 ), svget4( zq2, 0 ),
 								svget4( zq3, 0 ) );
@@ -561,8 +506,6 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 							p_ += ( 2 * SVL * SVL );
 						}
 						p_ += ( 4 * SVL * SVL );
-
-						// p_ += (2 * SVL * SVL);
 					}
 				}
 
@@ -605,4 +548,5 @@ void bli_dpackm_m4sme_int_4SVLx2SVL
 		 p_, ldp
 		);
 }
+
 
