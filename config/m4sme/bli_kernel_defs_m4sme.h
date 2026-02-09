@@ -38,11 +38,8 @@
 
 // -- REGISTER BLOCK SIZES (FOR REFERENCE KERNELS) ----------------------------
 
-#define BLIS_MR_s   16
-#define BLIS_MR_d   6
+#define BLIS_MR_s   64
+#define BLIS_MR_d   64
 
 #define BLIS_NR_s   16
 #define BLIS_NR_d   8
-
-//#endif
-

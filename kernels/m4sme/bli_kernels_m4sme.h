@@ -32,10 +32,10 @@
 
 */
 
-PACKM_KER_PROT( float,    s, packm_m4sme_int_8x12 )
-PACKM_KER_PROT( double,   d, packm_m4sme_int_6x8 )
+PACKM_KER_PROT( float,    s, packm_m4sme_int_4SVLxSVL )
+PACKM_KER_PROT( double,   d, packm_m4sme_int_8SVLxSVL )
 
-__arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
+__arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_int_4SVLxSVL
      (
              dim_t      m,
              dim_t      n,
@@ -49,31 +49,16 @@ __arm_new("za") __arm_locally_streaming void bli_sgemm_m4sme_asm_8x12
        const cntx_t*    cntx
      ) ;
 
-//GEMM_UKR_PROT( float,    s, gemm_m4sme_asm_8x12 )
-GEMM_UKR_PROT( double,   d, gemm_m4sme_asm_6x8 )
-GEMM_UKR_PROT( float,    s, gemm_m4sme_asm_12x8r )
-GEMM_UKR_PROT( double,   d, gemm_m4sme_asm_8x6r )
-// GEMM_UKR_PROT( double,   d, gemm_m4sme_asm_6x8r )
-// GEMM_UKR_PROT( double,   d, gemm_m4sme_asm_8x4 )
-// GEMM_UKR_PROT( double,   d, gemm_m4sme_asm_4x4 )
-
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_asm_6x8n )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_asm_6x8m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_6x8n )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_6x8m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_6x7m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_6x6m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_6x5m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_5x8n )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_4x8n )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_4x8m )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_asm_8x4m )
-
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_int_2x8 )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_int_3x4 )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_asm_3x4 )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rd_m4sme_asm_6x3 )
-
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_int_6x4mn )
-GEMMSUP_KER_PROT( double,   d, gemmsup_rv_m4sme_int_3x8mn )
-
+__arm_new( "za" ) __arm_locally_streaming void bli_dgemm_m4sme_int_8SVLxSVL
+     (
+             dim_t      m,
+             dim_t      n,
+             dim_t      k,
+       const void*      alpha,
+       const void*      a,
+       const void*      b,
+       const void*      beta,
+             void*      c, inc_t rs_c, inc_t cs_c,
+       const auxinfo_t* data,
+       const cntx_t*    cntx
+     );
