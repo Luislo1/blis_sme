@@ -206,10 +206,10 @@ __arm_new( "za" ) __arm_locally_streaming void bli_dpackm_m4sme_int_SVLx8SVL
 								svget4( zp7, 3 ) );
 
 							// ZA contents:
-							// Tile 0:SVL rows(top) x SVL columns(left).Tile
-							// 1:SVL rows(top) x SVL columns(right)
-							//  Tile 2:SVL rows(bot) x SVL columns(left).Tile
-							//  3:SVL rows(bot) x SVL columns(right)
+							// Tile 0:SVL rows(top) x SVL columns(left)
+							// Tile 1:SVL rows(top) x SVL columns(right)
+							// Tile 2:SVL rows(bot) x SVL columns(left)
+							// Tile 3:SVL rows(bot) x SVL columns(right)
 
 							svwrite_hor_za64_f64_vg4(
 								/* tile: */ 4, /* slice: */ trow, zq4 );
@@ -351,10 +351,10 @@ __arm_new( "za" ) __arm_locally_streaming void bli_dpackm_m4sme_int_SVLx8SVL
 								zp15 );
 
 							// ZA contents:
-							// Tile 0:SVL rows(top) x SVL columns(left).Tile
-							// 1:SVL rows(top) x SVL columns(right)
-							//  Tile 2:SVL rows(bot) x SVL columns(left).Tile
-							//  3:SVL rows(bot) x SVL columns(right)
+							// Tile 0:SVL rows(top) x SVL columns(left)
+							// Tile 1:SVL rows(top) x SVL columns(right)
+							// Tile 2:SVL rows(bot) x SVL columns(left)
+							// Tile 3:SVL rows(bot) x SVL columns(right)
 
 							svwrite_hor_za64_f64_vg4(
 								/* tile: */ 0, /* slice: */ trow, zq0 );
@@ -420,10 +420,10 @@ __arm_new( "za" ) __arm_locally_streaming void bli_dpackm_m4sme_int_SVLx8SVL
 								zp31 );
 
 							// ZA contents:
-							// Tile 0:SVL rows(top) x SVL columns(left).Tile
-							// 1:SVL rows(top) x SVL columns(right)
-							//  Tile 2:SVL rows(bot) x SVL columns(left).Tile
-							//  3:SVL rows(bot) x SVL columns(right)
+							// Tile 0:SVL rows(top) x SVL columns(left)
+							// Tile 1:SVL rows(top) x SVL columns(right)
+							// Tile 2:SVL rows(bot) x SVL columns(left)
+							// Tile 3:SVL rows(bot) x SVL columns(right)
 
 							svwrite_hor_za64_f64_vg4(
 								/* tile: */ 4, /* slice: */ trow, zq4 );
@@ -545,3 +545,4 @@ __arm_new( "za" ) __arm_locally_streaming void bli_dpackm_m4sme_int_SVLx8SVL
 		 p_, ldp
 		);
 }
+

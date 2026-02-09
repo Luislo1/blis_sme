@@ -70,7 +70,7 @@ __arm_new( "za" ) __arm_locally_streaming void bli_sgemm_m4sme_int_SVLx4SVL
 
 	for ( k_ = 0; k_ < k_iter; k_++ )
 	{
-		// Loads.
+		// Loads
 		svfloat32x4_t zL00 = svld1_f32_x4( svptrue_c32(),
 			(float32_t*)( &a_[0] ) );
 
@@ -127,6 +127,7 @@ __arm_new( "za" ) __arm_locally_streaming void bli_sgemm_m4sme_int_SVLx4SVL
 			svget4( zR03, 2 ) );
 		svmopa_za32_m( 3, svptrue_b32(), svptrue_b32(), svget4( zL00, 3 ),
 			svget4( zR03, 3 ) );
+
 		a_ += ( 4 * SVL );
 		b_ += ( 4 * 4 * SVL );
 	}
@@ -634,8 +635,7 @@ __arm_new( "za" ) __arm_locally_streaming void bli_sgemm_m4sme_int_SVLx4SVL
 	return;
 }
 
-__arm_new( "za" ) __arm_locally_streaming 
-void bli_dgemm_m4sme_int_SVLx8SVL
+__arm_new( "za" ) __arm_locally_streaming void bli_dgemm_m4sme_int_SVLx8SVL
      (
              dim_t      m,
              dim_t      n,
@@ -665,7 +665,7 @@ void bli_dgemm_m4sme_int_SVLx8SVL
 
 	for ( k_ = 0; k_ < k_iter; k_++ )
 	{
-		// Loads.
+		// Loads
 		svfloat64x4_t zL00 = svld1_f64_x4( svptrue_c32(),
 			(float64_t*)( &b_[0] ) );
 		svfloat64x4_t zL01 = svld1_f64_x4( svptrue_c32(),
