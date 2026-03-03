@@ -33,7 +33,6 @@
 */
 
 PACKM_KER_PROT( float,    s, packm_m4sme_int_2SVLx2SVL )
-PACKM_KER_PROT( double,   d, packm_m4sme_int_4SVLx2SVL )
 
 __arm_new( "za" ) __arm_locally_streaming void bli_sgemm_m4sme_int_2SVLx2SVL
      (
@@ -48,20 +47,6 @@ __arm_new( "za" ) __arm_locally_streaming void bli_sgemm_m4sme_int_2SVLx2SVL
        const auxinfo_t* data,
        const cntx_t*    cntx
      ) ;
-
-__arm_new( "za" ) __arm_locally_streaming void bli_dgemm_m4sme_int_4SVLx2SVL
-     (
-             dim_t      m,
-             dim_t      n,
-             dim_t      k,
-       const void*      alpha,
-       const void*      a,
-       const void*      b,
-       const void*      beta,
-             void*      c, inc_t rs_c, inc_t cs_c,
-       const auxinfo_t* data,
-       const cntx_t*    cntx
-     );
 
 
 
